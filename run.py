@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lancloud import config  # noqa: E402
+from lancloud.server import app  # noqa: E402  显式导入，供 PyInstaller 收集
 
 
 def lan_ips() -> list:
@@ -60,8 +61,7 @@ def main():
 
     import uvicorn
 
-    uvicorn.run("lancloud.server:app", host="0.0.0.0", port=port,
-                log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 
 if __name__ == "__main__":

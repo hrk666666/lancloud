@@ -1,0 +1,115 @@
+name: build-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 1.0.0）'
+        required: false
+        default: '1.0.0'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows 绿色版
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 确定版本号
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: 安装依赖与打包工具
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: PyInstaller 打包（onedir 绿色版）
+        shell: bash
+        run: |
+          python -m PyInstaller --noconfirm --clean --onedir --name LanCloud \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols \
+            --hidden-import uvicorn.protocols.http \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import uvicorn.lifespan \
+            --hidden-import uvicorn.lifespan.on \
+            --add-data "lancloud/templates;lancloud/templates" \
+            --add-data "lancloud/static;lancloud/static" \
+            run.py
+
+      - name: 生成绿色版使用说明
+        shell: bash
+        run: |
+          cat > dist/LanCloud/使用说明.txt <<'EOF'
+          LanCloud 局域网私有云网盘 - Windows 绿色版
+
+          使用步骤：
+          1. 双击 LanCloud.exe 启动（首次启动会稍慢，属正常）
+          2. 浏览器打开 http://127.0.0.1:8080
+          3. 默认管理员：admin / admin123，登录后请尽快修改密码
+             （编辑本目录 data/config.json 中的 admin_password，保存后重启）
+
+          局域网访问：
+          - 其他设备访问 http://你的IP:8080（启动窗口会打印所有可用地址）
+          - 域名定向（DNS 劫持）在登录后「管理面板」中配置，并附有图文教程
+
+          数据位置：
+          - 所有数据保存在本目录 data/ 下，备份时复制整个 data 文件夹
+          - 想彻底删除：关闭程序后删除本目录即可
+
+          注意：
+          - DNS 服务使用 53 端口需要管理员权限（右键 LanCloud.exe → 以管理员身份运行）
+          - 防火墙弹窗请允许访问，否则其他设备无法连接
+          EOF
+
+      - name: 压缩绿色版
+        shell: bash
+        run: |
+          cd dist
+          powershell -Command "Compress-Archive -Path LanCloud -DestinationPath LanCloud-v${VERSION}-win64.zip -Force"
+          ls -lh LanCloud-v${VERSION}-win64.zip
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: LanCloud v${{ env.VERSION }}
+          body: |
+            ## LanCloud v${{ env.VERSION }}
+
+            ### Windows 绿色版（免安装，解压即用）
+            - 下载 `LanCloud-v${{ env.VERSION }}-win64.zip`，解压后双击 `LanCloud.exe`
+            - 浏览器打开 `http://127.0.0.1:8080`，默认账号 `admin / admin123`
+
+            ### 功能
+            - 完整网盘：上传 / 下载 / 在线预览 / 分享链接 / 回收站 / 多用户 / 搜索
+            - DNS 域名定向：可视化配置 `pan.lan → 你的 IP`，其他设备零配置访问
+            - 中文界面，数据只存在本机 `data/` 目录
+
+            ### 说明
+            - 数据目录与 exe 同目录，删除文件夹即卸载
+            - DNS 53 端口需管理员权限运行
+          files: dist/LanCloud-v${{ env.VERSION }}-win64.zip

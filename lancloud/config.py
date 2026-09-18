@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """配置管理：全局配置与域名映射的读取 / 持久化"""
 import json
+import sys
 import threading
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    # PyInstaller 打包环境：数据目录放在可执行文件旁边，实现"绿色版便携"
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CONFIG_PATH = DATA_DIR / "config.json"
 DOMAINS_PATH = DATA_DIR / "domains.json"
