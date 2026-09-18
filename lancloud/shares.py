@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""分享链接：生成 / 查询 / 删除"""
+"""分享链接：生成 / 查询 / 删除（支持强制登录、过期时间）"""
 import json
 import secrets
 import threading
@@ -26,12 +26,16 @@ def _save(s: dict):
             json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def create(username: str, rel: str) -> dict:
+def create(username: str, rel: str, require_login: bool = False,
+           expire_days: int = 0) -> dict:
     token = secrets.token_hex(8)
     rec = {
-        "user": username, "path": rel,
+        "user": username,
+        "path": rel,
         "created": int(time.time()),
         "token": token,
+        "require_login": bool(require_login),
+        "expire_at": int(time.time()) + expire_days * 86400 if expire_days > 0 else 0,
     }
     s = _load()
     s[token] = rec
@@ -47,7 +51,13 @@ def list_shares(username: str) -> list:
 
 
 def get(token: str):
-    return _load().get(token)
+    rec = _load().get(token)
+    if not rec:
+        return None
+    # 过期校验
+    if rec.get("expire_at") and rec["expire_at"] < time.time():
+        return None
+    return rec
 
 
 def delete(token: str):

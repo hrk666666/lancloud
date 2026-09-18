@@ -67,19 +67,85 @@
             <button class="btn sm" onclick="toggleDns(false)">停止服务</button>
           </div>
         </div>
+        <div class="card stat-card">
+          <div class="sc-label">HTTPS（自签名）</div>
+          <div class="sc-value" id="st-https">-</div>
+          <div class="sc-sub" id="st-https-sub">-</div>
+        </div>
       </div>
 
       <!-- 标签页 -->
       <div class="card">
         <div class="tabs">
-          <button class="active" data-tab="domains" onclick="switchTab('domains')">域名定向（劫持）</button>
+          <button class="active" data-tab="wizard" onclick="switchTab('wizard')">劫持向导</button>
+          <button data-tab="domains" onclick="switchTab('domains')">域名定向</button>
+          <button data-tab="users" onclick="switchTab('users')">用户管理</button>
+          <button data-tab="mounts" onclick="switchTab('mounts')">共享文件夹</button>
+          <button data-tab="https" onclick="switchTab('https')">HTTPS</button>
           <button data-tab="tutorial" onclick="switchTab('tutorial')">接入教程</button>
           <button data-tab="system" onclick="switchTab('system')">系统信息</button>
         </div>
 
+        <!-- 劫持向导 -->
+        <div class="tab-pane active" id="pane-wizard">
+          <div class="notice warn"><b>使用须知：</b>此功能用于<b>你自己拥有或已获授权</b>的局域网。请勿在未经授权的网络中使用，否则可能违反《网络安全法》等法律法规。</div>
+
+          <div class="tutorial-step">
+            <div class="ts-num">1</div>
+            <div class="ts-body">
+              <h4>检查 DNS 服务状态</h4>
+              <p>DNS 服务必须运行，劫持才可能生效。<b id="wiz-dns-status">检查中…</b></p>
+              <p style="margin-top:6px">Windows 下端口 53 需要管理员权限：请<b>右键 LanCloud.exe → 以管理员身份运行</b>。若仍失败，通常是端口被占用或防火墙拦截（见下方诊断）。</p>
+              <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn primary sm" onclick="toggleDns(true)">启动 DNS 服务</button>
+                <button class="btn sm" onclick="runDiag()">运行一键诊断</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tutorial-step">
+            <div class="ts-num">2</div>
+            <div class="ts-body">
+              <h4>添加域名映射（劫持目标）</h4>
+              <p>把你要劫持的域名指向目标 IP（通常填本机 IP，即网盘所在设备）。示例：<code>pan.lan → 192.168.1.100</code>。完成后点「域名定向」标签页添加。</p>
+              <button class="btn sm" style="margin-top:6px" onclick="switchTab('domains')">去添加映射 →</button>
+            </div>
+          </div>
+
+          <div class="tutorial-step">
+            <div class="ts-num">3</div>
+            <div class="ts-body">
+              <h4>让局域网设备把 DNS 指向本机</h4>
+              <p>这是"一个链接覆盖全网"的关键。二选一：</p>
+              <ul>
+                <li><b>推荐：改路由器 DHCP</b>（一次配置，所有设备自动生效，无需逐台设置）——见「接入教程」方式一</li>
+                <li>单台设备手动设置 DNS——见「接入教程」方式二</li>
+              </ul>
+              <p style="margin-top:6px;color:var(--text-2)">注意：只改路由器 DNS 不够，还要在「域名定向」里添加映射，两者配合才完整。</p>
+            </div>
+          </div>
+
+          <div class="tutorial-step">
+            <div class="ts-num">4</div>
+            <div class="ts-body">
+              <h4>验证是否生效</h4>
+              <p>点击「运行一键诊断」，服务器会向自己发起查询验证映射是否正常返回。之后在另一台设备上验证：</p>
+              <ul>
+                <li>Windows：命令行执行 <code>nslookup pan.lan</code>，应返回你填的 IP</li>
+                <li>手机：浏览器打开 <code>http://pan.lan:端口</code></li>
+              </ul>
+              <p style="margin-top:6px;color:var(--text-2)">若返回的不是你的 IP，说明该设备的 DNS 还没指向本机，或设备有 DNS 缓存（重启 WiFi 或清缓存）。</p>
+            </div>
+          </div>
+
+          <div id="diag-result" style="display:none"></div>
+
+          <div class="notice info" style="margin-top:14px"><b>查询日志：</b>下方是 DNS 服务最近收到的查询记录。如果这里<b>没有任何记录</b>，说明局域网设备根本没有把 DNS 指到本机——先解决"设备 DNS 指向"这一步。</div>
+          <div class="log-box" id="dns-log-box">（暂无查询记录）</div>
+        </div>
+
         <!-- 域名定向 -->
-        <div class="tab-pane active" id="pane-domains">
-          <div class="notice warn"><b>使用须知：</b>此功能用于<b>你自己拥有或已获授权</b>的局域网。把某域名解析到指定 IP，其他设备无需任何配置即可通过该域名访问你的服务（如网盘）。请勿在未经授权的网络中使用，否则可能违反《网络安全法》等法律法规。</div>
+        <div class="tab-pane" id="pane-domains">
           <div class="notice info">原理：本机充当局域网 DNS 服务器，命中下方配置的域名时返回你指定的 IP；其余域名自动转发给上游 DNS（不影响正常上网）。</div>
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
@@ -96,9 +162,106 @@
           </table>
         </div>
 
+        <!-- 用户管理 -->
+        <div class="tab-pane" id="pane-users">
+          <div class="notice info">管理用户存储配额、分享权限、禁用/启用账号；支持单独创建与批量创建账号。</div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+            <div style="flex:1;min-width:200px">
+              <label class="mini-label">创建单个账号</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input class="input" id="nu-user" placeholder="用户名" style="max-width:150px">
+                <input class="input" id="nu-pass" placeholder="密码（至少 6 位）" style="max-width:160px">
+                <input class="input" id="nu-quota" placeholder="配额 MB（0=不限）" style="max-width:120px">
+                <button class="btn primary" onclick="createUser()">创建</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <button class="btn" onclick="toggleBatchPanel()">批量创建账号…</button>
+              <button class="btn" onclick="loadUsers()">刷新</button>
+            </div>
+          </div>
+
+          <div id="batch-panel" style="display:none;margin-bottom:14px">
+            <label class="mini-label">批量创建（每行一个：用户名 密码 [配额MB]，空格分隔）</label>
+            <textarea class="input" id="batch-text" rows="6" placeholder="user1 pass123&#10;user2 pass456 500&#10;user3 pass789 0"></textarea>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+              <button class="btn primary" onclick="batchCreate()">开始批量创建</button>
+              <span style="font-size:12px;color:var(--text-2)" id="batch-result"></span>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>用户名</th><th>角色</th><th>已用 / 配额</th><th>文件数</th><th>可分享</th><th>状态</th><th style="width:210px">操作</th></tr></thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+
+        <!-- 共享文件夹 -->
+        <div class="tab-pane" id="pane-mounts">
+          <div class="notice info">把本机任意文件夹共享给局域网用户浏览 / 下载（只读）。适合"把本地文件夹作为共享库"的场景。</div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+            <input class="input" id="mt-name" placeholder="共享名称，如 影视资源" style="max-width:180px">
+            <input class="input" id="mt-path" placeholder="本机文件夹路径，如 D:\Movies 或 /home/user/共享" style="min-width:260px;flex:1">
+            <button class="btn primary" onclick="addMount()">+ 添加共享</button>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>名称</th><th>路径</th><th>权限</th><th>启用</th><th style="width:120px">操作</th></tr></thead>
+            <tbody id="mounts-body"></tbody>
+          </table>
+        </div>
+
+        <!-- HTTPS -->
+        <div class="tab-pane" id="pane-https">
+          <div class="notice info">启用后，网盘和劫持页面支持 HTTPS 访问。证书为本机自动生成的自签名证书：<b>设备未安装 CA 证书时浏览器会提示"不安全"</b>，点"高级 → 继续访问"仍可访问；在设备上安装下方 CA 证书后可免警告。</div>
+
+          <div class="stat-cards" style="margin-bottom:14px">
+            <div class="card stat-card"><div class="sc-label">当前状态</div><div class="sc-value" id="https-status">-</div><div class="sc-sub" id="https-port-sub">-</div></div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+            <div>
+              <label class="mini-label">HTTPS 端口（劫持 HTTPS 网站时设为 443）</label>
+              <input class="input" id="https-port" style="max-width:120px" value="8443">
+            </div>
+            <button class="btn primary" onclick="setHttps(true)">启用 HTTPS</button>
+            <button class="btn" onclick="setHttps(false)">关闭 HTTPS</button>
+            <a class="btn" href="/api/ca/download" download>下载 CA 证书（用于安装到设备）</a>
+          </div>
+
+          <div class="tutorial-step">
+            <div class="ts-num">①</div>
+            <div class="ts-body">
+              <h4>访问自己的网盘（HTTPS）</h4>
+              <p>启用并重启后，可通过 <code>https://127.0.0.1:端口</code> 或 <code>https://局域网IP:端口</code> 访问。浏览器警告属正常，安装 CA 证书后消失。</p>
+            </div>
+          </div>
+          <div class="tutorial-step">
+            <div class="ts-num">②</div>
+            <div class="ts-body">
+              <h4>劫持 HTTPS 网站</h4>
+              <p>设备访问 <code>https://目标域名</code> 时默认连 443 端口，所以把 HTTPS 端口设为 <b>443</b>（需管理员权限）并启用后，劫持 HTTPS 站点可显示你的内容（浏览器会有证书警告；<b>启用了 HSTS 的站点如 google.com 无法劫持</b>，浏览器会直接拒绝）。</p>
+            </div>
+          </div>
+          <div class="tutorial-step">
+            <div class="ts-num">③</div>
+            <div class="ts-body">
+              <h4>安装 CA 证书（可选，消除警告）</h4>
+              <ul>
+                <li><b>Windows：</b>下载 CA 证书 → 双击 → 安装证书 → 本地计算机 → 受信任的根证书颁发机构</li>
+                <li><b>Android：</b>设置 → 安全 → 加密与凭据 → 安装证书 → CA 证书</li>
+                <li><b>iOS：</b>下载后到 设置 → 通用 → VPN 与设备管理 安装，再在"关于本机 → 证书信任设置"中启用完全信任</li>
+              </ul>
+            </div>
+          </div>
+          <div class="notice warn"><b>注意：</b>启用 HTTPS 需重启 LanCloud 生效。HTTPS 与 HTTP 可同时提供服务，互不影响。</div>
+        </div>
+
         <!-- 教程 -->
         <div class="tab-pane" id="pane-tutorial">
-          <div class="notice info">下面是最常见的三种接入方式，选一种即可。<b>都不需要对方设备安装任何软件或信任证书。</b></div>
+          <div class="notice info">下面是三种接入方式，选一种即可。<b>都不需要对方设备安装任何软件或信任证书（HTTP 场景）。</b></div>
 
           <div class="tutorial-step">
             <div class="ts-num">1</div>
@@ -137,8 +300,8 @@
           <div class="tutorial-step">
             <div class="ts-num">4</div>
             <div class="ts-body">
-              <h4>方式三：让网盘域名永远生效（DNS 指向 + 域名映射配合）</h4>
-              <p>把 <b>pan.lan → 本机 IP</b> 加进上面的「域名定向」列表，再用方式一或方式二把设备 DNS 指过来，然后所有设备访问 <b>http://pan.lan:端口</b> 即可打开网盘，无需记 IP。</p>
+              <h4>方式三：手机开热点（设备连热点即可劫持）</h4>
+              <p>如果不想动路由器：本机开手机热点，把 DNS 服务端口改为 53，其他设备连这个热点并把 DNS 指到本机 IP 即可。适合临时演示。</p>
             </div>
           </div>
 
@@ -148,7 +311,7 @@
               <h4>重要限制（必读）</h4>
               <ul>
                 <li><b>HTTP 网站：</b>可被无缝解析到你的服务，设备端直接看到你的内容。</li>
-                <li><b>HTTPS 网站：</b>浏览器会提示"证书不受信任/不安全"，因为你的服务没有对方的证书。除非每台设备手动信任你的证书（这就不是零配置了），<b>静默劫持 HTTPS 网站做不到</b>——这是 TLS 加密的设计保证。</li>
+                <li><b>HTTPS 网站：</b>浏览器会提示"证书不受信任"，因为你的服务没有对方的证书。启用自签名 HTTPS（见 HTTPS 标签页）后，点"高级 → 继续访问"仍可看到内容；<b>静默无警告劫持 HTTPS 做不到</b>——除非每台设备安装你的 CA 证书。</li>
                 <li><b>合法边界：</b>只在你自己的网络和设备上使用。未经授权劫持他人流量违反中国《网络安全法》和《刑法》，用于钓鱼盗号属于犯罪。</li>
               </ul>
             </div>
@@ -158,19 +321,35 @@
         <!-- 系统信息 -->
         <div class="tab-pane" id="pane-system">
           <div class="stat-cards" style="margin-bottom:14px">
-            <div class="card stat-card"><div class="sc-label">数据目录</div><div class="sc-sub" style="margin-top:6px;font-size:12.5px">data/（用户文件、配置、分享）</div></div>
+            <div class="card stat-card"><div class="sc-label">数据目录</div><div class="sc-sub" style="margin-top:6px;font-size:12.5px">data/（用户文件、配置、分享、证书）</div></div>
             <div class="card stat-card"><div class="sc-label">Web 端口</div><div class="sc-value" id="sys-webport">-</div></div>
             <div class="card stat-card"><div class="sc-label">DNS 端口</div><div class="sc-value" id="sys-dnsport">-</div></div>
             <div class="card stat-card"><div class="sc-label">开放注册</div><div class="sc-value" id="sys-reg">-</div></div>
           </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+            <div>
+              <label class="mini-label">开放注册开关（关闭后普通用户无法自助注册）</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="font-size:13px" id="sys-reg-now">-</span>
+                <button class="btn sm" onclick="setRegister(true)">开放</button>
+                <button class="btn sm" onclick="setRegister(false)">关闭</button>
+              </div>
+            </div>
+            <div>
+              <label class="mini-label">新用户默认存储配额（MB，0=不限）</label>
+              <div style="display:flex;gap:8px">
+                <input class="input" id="sys-quota" style="max-width:110px">
+                <button class="btn sm" onclick="setDefaultQuota()">保存</button>
+              </div>
+            </div>
+          </div>
           <table class="data-table">
             <thead><tr><th>组件</th><th>说明</th><th>类型</th></tr></thead>
             <tbody>
-              <tr><td><b>LanCloud（本项目）</b></td><td>网盘、管理面板、DNS 服务</td><td><span class="badge blue">自研</span></td></tr>
+              <tr><td><b>LanCloud（本项目）</b></td><td>网盘、管理面板、DNS 服务、自签名 HTTPS</td><td><span class="badge blue">自研</span></td></tr>
               <tr><td>FastAPI + Uvicorn</td><td>Web 服务框架（高性能异步）</td><td><span class="badge blue">开源</span></td></tr>
               <tr><td>dnslib</td><td>DNS 协议解析库</td><td><span class="badge blue">开源</span></td></tr>
-              <tr><td>Alist（进阶可选）</td><td>高性能网盘程序，docker-compose 集成</td><td><span class="badge blue">开源</span></td></tr>
-              <tr><td>AdGuard Home（进阶可选）</td><td>广告过滤 + DNS 服务，docker-compose 集成</td><td><span class="badge blue">开源</span></td></tr>
+              <tr><td>cryptography</td><td>自签名 CA / HTTPS 证书生成</td><td><span class="badge blue">开源</span></td></tr>
             </tbody>
           </table>
         </div>

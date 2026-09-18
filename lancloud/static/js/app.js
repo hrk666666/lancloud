@@ -48,7 +48,7 @@ const EXT_CAT = {
   vid: ["mp4", "webm", "mkv", "mov", "avi", "m4v"],
   aud: ["mp3", "wav", "ogg", "m4a", "flac", "aac", "opus"],
   doc: ["doc", "docx", "ppt", "pptx", "xls", "xlsx", "pdf"],
-  txt: ["txt", "md", "json", "js", "py", "html", "css", "xml", "yml", "yaml", "log", "ini", "conf", "sh", "bat", "c", "cpp", "h", "java", "go", "rs"],
+  txt: ["txt", "md", "json", "js", "py", "html", "css", "xml", "yml", "yaml", "log", "ini", "conf", "sh", "bat", "c", "cpp", "h", "java", "go", "rs", "csv", "sql", "toml", "env"],
   arc: ["zip", "rar", "7z", "tar", "gz", "xz", "bz2"],
   code: [],
 };
@@ -131,26 +131,40 @@ async function initApp() {
   document.getElementById("user-role").textContent = ME.is_admin ? "管理员" : "普通用户";
   document.getElementById("user-avatar").textContent = ME.username.slice(0, 1).toUpperCase();
   if (ME.is_admin) document.getElementById("nav-admin").style.display = "";
+  if (!ME.allow_register) document.getElementById("tab-reg").style.display = "none";
+  if (!ME.can_share) {
+    document.querySelector('.nav-item[data-view="shares"]').style.display = "none";
+  }
   updateUsage();
   loadFiles("");
+  loadMountsRoot();
 }
 
 function updateUsage() {
   if (!ME) return;
-  const pct = Math.min(100, Math.round(ME.size / (500 * 1024 * 1024) * 100));
+  let txt = `已用 ${fmtSize(ME.size)} · ${ME.files} 个文件`;
+  let pct = 0;
+  if (ME.quota_mb > 0) {
+    pct = Math.min(100, Math.round(ME.size / (ME.quota_mb * 1024 * 1024) * 100));
+    txt += ` / 配额 ${ME.quota_mb} MB`;
+    if (pct >= 90) txt += "（空间即将用尽）";
+  } else if (ME.is_admin) {
+    // 管理员不限
+  }
   document.getElementById("usage-bar").style.width = pct + "%";
-  document.getElementById("usage-txt").textContent = `已用 ${fmtSize(ME.size)} · ${ME.files} 个文件`;
+  document.getElementById("usage-txt").textContent = txt;
 }
 
 // ---------- 视图切换 ----------
 function switchView(v) {
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.view === v));
-  ["files", "shares", "trash"].forEach((k) => {
+  ["files", "mounts", "shares", "trash"].forEach((k) => {
     document.getElementById("view-" + k).style.display = k === v ? "" : "none";
   });
   if (v === "shares") loadShares();
   if (v === "trash") loadTrash();
   if (v === "files") loadFiles(STATE.path);
+  if (v === "mounts") loadMountsRoot();
 }
 
 // ---------- 文件浏览 ----------
@@ -208,7 +222,8 @@ function renderItems(items) {
       <td>${it.is_dir ? "—" : fmtSize(it.size)}</td>
       <td>${fmtTime(it.mtime)}</td>
       <td><div class="l-actions">
-        ${it.is_dir ? "" : `<button title="下载" onclick="event.stopPropagation();downloadItem('${esc(it.path)}')">下载</button>`}
+        ${it.is_dir ? `<button title="打包下载" onclick="event.stopPropagation();zipItem('${esc(it.path)}')">打包</button>` : `<button title="下载" onclick="event.stopPropagation();downloadItem('${esc(it.path)}')">下载</button>`}
+        ${it.is_dir ? "" : `<button title="在线编辑" onclick="event.stopPropagation();editItem('${esc(it.path)}')">编辑</button>`}
         <button title="分享" onclick="event.stopPropagation();shareItem('${esc(it.path)}')">分享</button>
         <button title="重命名" onclick="event.stopPropagation();renameItem('${esc(it.path)}')">重命名</button>
         <button title="移动" onclick="event.stopPropagation();moveItem('${esc(it.path)}')">移动</button>
@@ -220,7 +235,8 @@ function cardHtml(it) {
   const p = esc(it.path), n = esc(it.name);
   return `<div class="file-card" ondblclick="openItem('${p}',${it.is_dir})">
     <div class="fc-actions">
-      ${it.is_dir ? "" : `<button title="下载" onclick="downloadItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg></button>`}
+      ${it.is_dir ? `<button title="打包下载" onclick="zipItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg></button>`
+        : `<button title="下载" onclick="downloadItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg></button>`}
       <button title="分享" onclick="shareItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M8.6 10.5l6.8-4"/></svg></button>
       <button title="重命名" onclick="renameItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 3l4 4L8 20l-5 1 1-5z"/></svg></button>
       <button title="删除" onclick="deleteItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button>
@@ -311,13 +327,54 @@ function downloadItem(path) {
   window.location.href = "/api/fs/download?path=" + encodeURIComponent(path);
 }
 
+function zipItem(path) {
+  window.location.href = "/api/fs/zip?path=" + encodeURIComponent(path);
+}
+
+function zipCurrent() {
+  if (!STATE.path) { toast("当前已在根目录", "err"); return; }
+  zipItem(STATE.path);
+}
+
 async function shareItem(path) {
+  showModal(`
+    <div class="modal" style="max-width:480px">
+      <div class="modal-head"><h3>创建分享链接</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="modal-body">
+        <div class="form-row"><label>分享内容</label><div style="font-size:13.5px">${esc(path.split("/").pop() || path)}</div></div>
+        <div class="form-row"><label>访问限制</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:8px">
+            <input type="checkbox" id="share-login" style="width:16px;height:16px"> 需要登录后才能访问（对方需有本网盘账号）
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px">
+            <span>链接有效期：</span>
+            <select class="select" id="share-expire" style="width:auto">
+              <option value="0">永久有效</option>
+              <option value="1">1 天</option>
+              <option value="7">7 天</option>
+              <option value="30">30 天</option>
+            </select>
+          </div>
+        </div>
+        <div class="notice info" style="margin:0">局域网内任何设备打开链接即可访问；选择「需要登录」后，未登录访客会先看到登录页。</div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn primary" onclick="doShare('${esc(path)}')">生成链接</button>
+      </div>
+    </div>`);
+}
+
+async function doShare(path) {
+  const require_login = document.getElementById("share-login").checked;
+  const expire_days = parseInt(document.getElementById("share-expire").value || "0", 10);
   try {
     const rec = await api("/api/share", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ path, require_login, expire_days }),
     });
     const url = location.origin + "/s/" + rec.token;
+    closeModal();
     showModal(`
       <div class="modal" style="max-width:460px">
         <div class="modal-head"><h3>分享链接已生成</h3><button class="modal-close" onclick="closeModal()">×</button></div>
@@ -326,7 +383,7 @@ async function shareItem(path) {
             <input class="input" id="share-url" readonly value="${url}">
           </div>
           <div class="form-row"><label>路径：${esc(path)}</label></div>
-          <div class="notice info">提示：对方需与你在同一局域网内；链接无需对方登录即可访问。</div>
+          <div class="notice info">${require_login ? "已开启强制登录：访客需先登录网盘账号。" : "免登录访问。"}${expire_days ? ` 有效期 ${expire_days} 天。` : " 永久有效。"}</div>
         </div>
         <div class="modal-foot">
           <button class="btn" onclick="closeModal()">关闭</button>
@@ -476,10 +533,12 @@ function previewItem(path) {
       <div class="pf-name">${esc(name)}</div>
       <div class="pf-size">此类型不支持在线预览，请下载后查看</div>
       <a class="btn primary" href="${dl}">下载文件</a></div>`;
+  const editBtn = t === "txt" ? `<button class="btn sm" onclick="editItem('${esc(path)}')">编辑</button>` : "";
   showModal(`
     <div class="modal" style="max-width:640px">
       <div class="modal-head"><h3 style="word-break:break-all">${esc(name)}</h3>
         <div style="display:flex;gap:8px">
+          ${editBtn}
           <a class="btn sm" href="${dl}">下载</a>
           <button class="modal-close" onclick="closeModal()">×</button>
         </div></div>
@@ -500,25 +559,122 @@ async function loadPreviewText(url) {
   }
 }
 
+// ---------- 在线编辑 ----------
+async function editItem(path) {
+  let content = "";
+  try {
+    const data = await api("/api/fs/read?path=" + encodeURIComponent(path));
+    content = data.content || "";
+  } catch (e) { toast(e.message, "err"); return; }
+  showModal(`
+    <div class="modal" style="max-width:720px">
+      <div class="modal-head"><h3 style="word-break:break-all">编辑：${esc(path.split("/").pop())}</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="modal-body">
+        <textarea class="input" id="edit-area" style="height:52vh;font-family:ui-monospace,Consolas,monospace;font-size:13px;white-space:pre;overflow:auto" spellcheck="false"></textarea>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn primary" onclick="saveEdit('${esc(path)}')">保存</button>
+      </div>
+    </div>`);
+  document.getElementById("edit-area").value = content;
+}
+
+async function saveEdit(path) {
+  const content = document.getElementById("edit-area").value;
+  try {
+    await api("/api/fs/edit", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, content }),
+    });
+    closeModal(); toast("已保存", "ok"); loadFiles(STATE.path);
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ---------- 共享文件夹（外部挂载） ----------
+const MOUNT = { list: [], id: null, path: "" };
+
+async function loadMountsRoot() {
+  MOUNT.id = null; MOUNT.path = "";
+  document.getElementById("mount-root").style.display = "";
+  document.getElementById("mount-folder").style.display = "none";
+  document.getElementById("mount-crumbs").innerHTML = '<span class="cur">共享文件夹</span>';
+  let items = [];
+  try { items = (await api("/api/mounts")).items; } catch (e) { toast(e.message, "err"); }
+  const body = document.getElementById("mount-list-body");
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="3"><div class="empty" style="padding:40px">暂无共享文件夹<br><span style="font-size:12px">管理员可在管理面板「共享文件夹」中添加本机任意目录供大家浏览下载</span></div></td></tr>';
+    return;
+  }
+  body.innerHTML = items.map((m) => `
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <span class="ico ico-folder"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></span>
+        <b>${esc(m.name)}</b></div></td>
+      <td style="color:var(--text-2)">${m.readonly ? "只读（可浏览 / 下载）" : "可读写"}</td>
+      <td><button class="btn sm primary" onclick="openMount('${m.id}')">打开</button></td>
+    </tr>`).join("");
+}
+
+async function openMount(id) {
+  MOUNT.id = id; MOUNT.path = "";
+  document.getElementById("mount-root").style.display = "none";
+  document.getElementById("mount-folder").style.display = "";
+  const m = (await api("/api/mounts")).items.find((x) => x.id === id);
+  document.getElementById("mount-crumbs").innerHTML =
+    `<a href="#" onclick="return loadMountsRoot()">共享文件夹</a><span class="sep">/</span><span class="cur">${esc(m ? m.name : id)}</span>`;
+  loadMountDir("");
+}
+
+async function loadMountDir(rel) {
+  MOUNT.path = rel;
+  try {
+    const data = await api(`/api/mounts/${MOUNT.id}/browse?path=` + encodeURIComponent(rel));
+    const body = document.getElementById("mount-files-body");
+    if (!data.items.length) {
+      body.innerHTML = '<tr><td colspan="4"><div class="empty" style="padding:40px">此文件夹是空的</div></td></tr>';
+      return;
+    }
+    body.innerHTML = data.items.map((it) => {
+      const p = encodeURIComponent(it.path);
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px;cursor:pointer" ${it.is_dir ? `onclick="loadMountDir('${it.path}')"` : ""}>
+          ${it.is_dir ? '<span class="ico ico-folder"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></span>'
+            : fileIcon(it.name, false, it.size)}
+          <span>${esc(it.name)}</span></div></td>
+        <td>${it.is_dir ? "—" : fmtSize(it.size)}</td>
+        <td>${fmtTime(it.mtime)}</td>
+        <td>${it.is_dir ? '<button class="btn sm" onclick="loadMountDir(\'' + it.path + '\')">打开</button>'
+          : '<a class="btn sm" href="/api/mounts/' + MOUNT.id + '/download?path=' + p + '">下载</a>'}</td>
+      </tr>`;
+    }).join("");
+  } catch (e) { toast(e.message, "err"); }
+}
+
 // ---------- 分享管理 ----------
 async function loadShares() {
   let items = [];
   try { items = (await api("/api/share/list")).items; } catch (e) {}
   const body = document.getElementById("shares-body");
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="5"><div class="empty">还没有分享，回到「我的网盘」右键文件点击分享试试</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="6"><div class="empty">还没有分享，回到「我的网盘」选择文件点击分享试试</div></td></tr>';
     return;
   }
-  body.innerHTML = items.map((s) => `
+  body.innerHTML = items.map((s) => {
+    const limit = (s.require_login ? "需登录" : "免登录") +
+                  (s.expire_at ? " · " + fmtTime(s.expire_at) + " 过期" : " · 永久");
+    return `
     <tr>
       <td>${esc(s.path.split("/").pop() || s.path)}</td>
       <td style="color:var(--text-2)">${esc(s.path || "/")}</td>
       <td style="color:var(--text-2)">${fmtTime(s.created)}</td>
+      <td style="color:var(--text-2)">${limit}</td>
       <td><a href="#" onclick="copyLink('${s.token}');return false" style="color:var(--primary)">复制链接</a></td>
       <td><div class="row-actions">
         <button class="btn sm danger" onclick="deleteShare('${s.token}')">取消分享</button>
       </div></td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
 
 function copyLink(token) {

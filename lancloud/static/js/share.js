@@ -1,5 +1,5 @@
 /* ============================================================
-   LanCloud 分享页逻辑（无需登录）
+   LanCloud 分享页逻辑（支持强制登录）
    ============================================================ */
 "use strict";
 
@@ -24,14 +24,31 @@ function fmtTime(ts) {
 
 const DL = "/api/s/" + TOKEN + "/download?path=";
 let CUR = "";   // 当前子目录（相对分享根）
-let ROOT = "";
 
-async function api(url) {
-  const resp = await fetch(url);
+async function api(url, opts) {
+  const resp = await fetch(url, opts);
   let data = null;
   try { data = await resp.json(); } catch (e) {}
   if (!resp.ok) throw new Error((data && data.detail) || "加载失败");
   return data;
+}
+
+async function doShareLogin(e) {
+  e.preventDefault();
+  try {
+    await api("/api/auth/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("sl-user").value.trim(),
+        password: document.getElementById("sl-pass").value,
+      }),
+    });
+    document.getElementById("share-login-card").style.display = "none";
+    load();
+  } catch (err) {
+    alert(err.message);
+  }
+  return false;
 }
 
 function renderSingle(name) {
@@ -51,7 +68,6 @@ async function load() {
     const info = await api("/api/s/" + TOKEN + "/info");
     document.getElementById("sh-title").textContent = info.name;
     document.getElementById("sh-sub").textContent = (info.is_dir ? "文件夹分享 · " : "文件分享 · ") + "仅限同一局域网访问";
-    ROOT = info.path;
     if (info.is_dir) {
       document.getElementById("share-folder").style.display = "";
       await loadDir("");
@@ -62,6 +78,11 @@ async function load() {
       renderSingle(info.name);
     }
   } catch (e) {
+    if (e.message.includes("登录")) {
+      document.getElementById("sh-title").textContent = "需要登录";
+      document.getElementById("share-login-card").style.display = "";
+      return;
+    }
     document.getElementById("share-empty").style.display = "";
     document.getElementById("sh-title").textContent = "分享不可用";
   }

@@ -1,17 +1,27 @@
 # -*- coding: utf-8 -*-
-"""用户文件存储：目录浏览 / 上传 / 下载 / 重命名 / 移动 / 回收站"""
+"""用户文件存储：目录浏览 / 上传 / 下载 / 重命名 / 移动 / 回收站 / 打包"""
 import json
 import os
 import re
 import shutil
 import threading
 import time
+import zipfile
 from pathlib import Path
 
 from . import config
 
 TRASH_INDEX = config.DATA_DIR / "trash_index.json"
 _lock = threading.Lock()
+
+# 可在线编辑的文本类型
+EDITABLE_EXT = {"txt", "md", "json", "js", "py", "html", "css", "xml", "yml",
+                "yaml", "log", "ini", "conf", "sh", "bat", "c", "cpp", "h",
+                "java", "go", "rs", "csv", "sql", "toml", "env"}
+
+
+class QuotaExceeded(Exception):
+    pass
 
 
 def user_root(username: str) -> Path:
@@ -105,7 +115,8 @@ def move(username: str, rel: str, dest_dir: str):
     shutil.move(str(p), str(target))
 
 
-def save_upload(username: str, rel: str, filename: str, stream) -> Path:
+def save_upload(username: str, rel: str, filename: str, stream,
+                quota_bytes: int = 0) -> Path:
     base = user_root(username)
     d = safe_path(base, rel)
     if not d.is_dir():
@@ -114,8 +125,16 @@ def save_upload(username: str, rel: str, filename: str, stream) -> Path:
     if dest.exists():
         stem, ext = os.path.splitext(dest.name)
         dest = d / f"{stem}.{int(time.time())}{ext}"
-    with open(dest, "wb") as f:
+    # 配额预检：新文件大小未知，先写入临时文件再校验
+    tmp = dest.with_name(dest.name + ".part")
+    with open(tmp, "wb") as f:
         shutil.copyfileobj(stream, f, 1024 * 1024)
+    if quota_bytes > 0:
+        used, _ = stat_usage(username)
+        if used + tmp.stat().st_size > quota_bytes:
+            tmp.unlink(missing_ok=True)
+            raise QuotaExceeded("存储空间不足，已超出配额")
+    tmp.replace(dest)
     return dest
 
 
@@ -158,6 +177,49 @@ def stat_usage(username: str):
                 total += p.stat().st_size
                 n += 1
     return total, n
+
+
+def make_zip(username: str, rel: str) -> Path:
+    """把文件或目录打包为 zip，返回临时文件路径"""
+    base = user_root(username)
+    p = safe_path(base, rel)
+    if not p.exists():
+        raise FileNotFoundError("文件不存在")
+    config.ensure_dirs()
+    out = config.DATA_DIR / "tmp" / f"zip_{username}_{int(time.time())}.zip"
+    name = p.name
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+        if p.is_file():
+            zf.write(p, name)
+        else:
+            for f in sorted(p.rglob("*")):
+                if f.is_file():
+                    zf.write(f, f"{name}/{f.relative_to(p)}".replace("\\", "/"))
+    return out
+
+
+# ---------------- 在线编辑 ----------------
+def is_editable(name: str) -> bool:
+    return (name.split(".").pop() or "").lower() in EDITABLE_EXT
+
+
+def read_text(username: str, rel: str, max_bytes: int = 2 * 1024 * 1024) -> str:
+    p = get_path(username, rel)
+    if p.is_dir():
+        raise NotADirectoryError("不能编辑目录")
+    if p.stat().st_size > max_bytes:
+        raise ValueError("文件过大，不支持在线编辑")
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def write_text(username: str, rel: str, content: str):
+    p = get_path(username, rel)
+    if p.is_dir():
+        raise NotADirectoryError("不能编辑目录")
+    if not is_editable(p.name):
+        raise ValueError("该文件类型不支持在线编辑")
+    quota = 0
+    p.write_text(content or "", encoding="utf-8")
 
 
 # ---------------- 回收站 ----------------

@@ -34,7 +34,7 @@
         <input class="input" type="password" id="reg-pass" autocomplete="new-password" placeholder="至少 6 位" required></div>
       <button type="submit" class="btn primary">注 册 并 登 录</button>
     </form>
-    <div class="login-tip">首次启动时已自动创建管理员：admin / admin123<br>登录后请在网盘内自行修改（当前版本建议修改 data/config.json）</div>
+    <div class="login-tip" id="reg-tip">首次启动已自动创建管理员：admin / admin123<br>登录后请在管理面板修改密码与配置</div>
   </div>
 </div>
 
@@ -48,6 +48,8 @@
     <nav class="nav">
       <button class="nav-item active" data-view="files" onclick="switchView('files')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>我的网盘</button>
+      <button class="nav-item" data-view="mounts" onclick="switchView('mounts')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>共享文件夹</button>
       <button class="nav-item" data-view="shares" onclick="switchView('shares')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M8.6 10.5l6.8-4"/></svg>分享管理</button>
       <button class="nav-item" data-view="trash" onclick="switchView('trash')">
@@ -82,6 +84,7 @@
             <span class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
           </div>
           <button class="btn" onclick="openNewFolder()">+ 新建文件夹</button>
+          <button class="btn" onclick="zipCurrent()" title="将当前目录打包为 zip 下载">⬇ 打包下载</button>
           <button class="btn primary" onclick="document.getElementById('file-input').click()">↑ 上传</button>
           <input type="file" id="file-input" multiple style="display:none" onchange="handleSelect(event)">
         </div>
@@ -98,7 +101,28 @@
         <div class="drop-zone" id="drop-zone">松开鼠标，把文件拖到这里上传</div>
         <div id="file-grid" class="file-grid"></div>
         <div id="file-list" class="file-list">
-          <table><thead><tr><th style="width:44%">名称</th><th>大小</th><th>修改时间</th><th style="width:120px">操作</th></tr></thead><tbody id="file-list-body"></tbody></table>
+          <table><thead><tr><th style="width:44%">名称</th><th>大小</th><th>修改时间</th><th style="width:150px">操作</th></tr></thead><tbody id="file-list-body"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 共享文件夹视图 -->
+    <section id="view-mounts" style="display:none">
+      <div class="topbar">
+        <div class="crumbs" id="mount-crumbs"><span class="cur">共享文件夹</span></div>
+      </div>
+      <div class="panel">
+        <div id="mount-root" style="padding:8px 0">
+          <table class="data-table">
+            <thead><tr><th>共享名称</th><th>说明</th><th style="width:100px">操作</th></tr></thead>
+            <tbody id="mount-list-body"></tbody>
+          </table>
+        </div>
+        <div id="mount-folder" style="display:none">
+          <table class="data-table">
+            <thead><tr><th>名称</th><th>大小</th><th>修改时间</th><th style="width:120px">操作</th></tr></thead>
+            <tbody id="mount-files-body"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -108,7 +132,7 @@
       <div class="topbar"><div class="crumbs"><span class="cur">分享管理</span></div></div>
       <div class="panel">
         <div class="data-table-wrap"><table class="data-table">
-          <thead><tr><th>分享名称</th><th>路径</th><th>创建时间</th><th>链接</th><th style="width:90px">操作</th></tr></thead>
+          <thead><tr><th>分享名称</th><th>路径</th><th>创建时间</th><th>访问限制</th><th>链接</th><th style="width:90px">操作</th></tr></thead>
           <tbody id="shares-body"></tbody>
         </table></div>
       </div>

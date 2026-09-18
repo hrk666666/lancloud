@@ -2,3 +2,4 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 dnslib>=0.9.24
 python-multipart>=0.0.9
+cryptography>=42.0

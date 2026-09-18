@@ -15,6 +15,23 @@
     <div class="sh-sub" id="sh-sub">LanCloud 分享 · 仅限同一局域网访问</div>
   </div>
 
+  <!-- 强制登录面板 -->
+  <div class="card" id="share-login-card" style="display:none;max-width:380px;margin:0 auto">
+    <div style="padding:24px">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:600">该分享需要登录后访问</div>
+        <div style="font-size:12.5px;color:var(--text-2);margin-top:4px">请输入你的 LanCloud 账号</div>
+      </div>
+      <form onsubmit="return doShareLogin(event)">
+        <div class="form-row"><label>用户名</label>
+          <input class="input" id="sl-user" autocomplete="username" required></div>
+        <div class="form-row"><label>密码</label>
+          <input class="input" type="password" id="sl-pass" autocomplete="current-password" required></div>
+        <button type="submit" class="btn primary" style="width:100%;justify-content:center">登 录 后 访 问</button>
+      </form>
+    </div>
+  </div>
+
   <div class="card">
     <div id="share-single" class="share-single" style="display:none;padding:40px 20px">
       <div class="big-icon" id="single-icon"></div>
