@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分享 · LanCloud</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232F6FED'/%3E%3Cpath d='M9 21V12l7-4 7 4v9h-5v-5h-4v5z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="share-page">
+  <div class="share-head">
+    <svg width="52" height="52" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="#2F6FED"/><path d="M9 22V12.5l8-4.5 8 4.5V22h-5.5v-5.5h-5V22z" fill="#fff"/><circle cx="24" cy="24" r="4" fill="#3B9EFF" stroke="#fff" stroke-width="1.5"/></svg>
+    <div class="sh-title" id="sh-title">加载中…</div>
+    <div class="sh-sub" id="sh-sub">LanCloud 分享 · 仅限同一局域网访问</div>
+  </div>
+
+  <div class="card">
+    <div id="share-single" class="share-single" style="display:none;padding:40px 20px">
+      <div class="big-icon" id="single-icon"></div>
+      <div class="pf-name" id="single-name"></div>
+      <div class="pf-size" id="single-size"></div>
+      <div id="single-preview"></div>
+      <div style="margin-top:14px"><a class="btn primary" id="single-dl" href="#">下载文件</a></div>
+    </div>
+
+    <div id="share-folder" style="display:none">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--text-2)">当前位置：</span><span id="share-crumb">/</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>名称</th><th>大小</th><th>修改时间</th><th style="width:90px">操作</th></tr></thead>
+        <tbody id="share-items"></tbody>
+      </table>
+    </div>
+
+    <div id="share-empty" class="empty" style="display:none">分享不存在或已失效</div>
+  </div>
+
+  <div class="foot-note">由 LanCloud 局域网私有云网盘提供 · 数据存放在分享者自己的设备上</div>
+</div>
+<script src="/static/js/share.js"></script>
+</body>
+</html>

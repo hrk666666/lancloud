@@ -1,0 +1,39 @@
+# LanCloud 进阶方案（可选）：集成两个高评分开源项目
+#   - Alist        ：高性能网盘程序（本地/WebDAV/网盘聚合），端口 5244
+#   - AdGuard Home ：DNS 过滤 + 广告拦截 + 局域网 DNS，管理页端口 3000
+#
+# 说明：LanCloud 自带轻量网盘与 DNS 服务，不开 Docker 也能完整使用。
+#       此文件适合想要"更强网盘 + 广告拦截"的用户。
+#
+# 用法：
+#   docker compose up -d
+#   之后把设备 DNS 指向本机，Alist 域名映射如 pan.lan -> 本机 IP
+#
+# 注意：AdGuard Home 与 LanCloud DNS 都占用 53 端口，请二选一使用，
+#       或把 AdGuard 的 DNS 端口改成其他值（如 5353）。
+
+services:
+  alist:
+    image: xhofe/alist:latest
+    container_name: alist
+    restart: unless-stopped
+    volumes:
+      - ./data/alist:/opt/alist/data
+    ports:
+      - "5244:5244"
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=022
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    volumes:
+      - ./data/adguard/work:/opt/adguardhome/work
+      - ./data/adguard/conf:/opt/adguardhome/conf
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "3000:3000/tcp"

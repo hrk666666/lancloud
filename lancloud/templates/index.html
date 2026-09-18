@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LanCloud · 局域网私有云网盘</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232F6FED'/%3E%3Cpath d='M9 21V12l7-4 7 4v9h-5v-5h-4v5z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="login-view">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-title">☁ LanCloud</div>
+      <div class="logo-sub">局域网私有云网盘 · 数据只在你自己的设备上</div>
+    </div>
+    <div class="login-tabs">
+      <button id="tab-login" class="active" onclick="switchLoginTab('login')">登录</button>
+      <button id="tab-reg" onclick="switchLoginTab('reg')">注册</button>
+    </div>
+    <form id="login-form" onsubmit="return doLogin(event)">
+      <div class="form-row"><label>用户名</label>
+        <input class="input" id="login-user" autocomplete="username" placeholder="输入用户名" required></div>
+      <div class="form-row"><label>密码</label>
+        <input class="input" type="password" id="login-pass" autocomplete="current-password" placeholder="输入密码" required></div>
+      <button type="submit" class="btn primary">登 录</button>
+    </form>
+    <form id="reg-form" style="display:none" onsubmit="return doRegister(event)">
+      <div class="form-row"><label>用户名</label>
+        <input class="input" id="reg-user" autocomplete="username" placeholder="至少 2 个字符" required></div>
+      <div class="form-row"><label>密码</label>
+        <input class="input" type="password" id="reg-pass" autocomplete="new-password" placeholder="至少 6 位" required></div>
+      <button type="submit" class="btn primary">注 册 并 登 录</button>
+    </form>
+    <div class="login-tip">首次启动时已自动创建管理员：admin / admin123<br>登录后请在网盘内自行修改（当前版本建议修改 data/config.json）</div>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div id="app-view">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="#2F6FED"/><path d="M9 22V12.5l8-4.5 8 4.5V22h-5.5v-5.5h-5V22z" fill="#fff"/><circle cx="24" cy="24" r="4" fill="#3B9EFF" stroke="#fff" stroke-width="1.5"/></svg>
+      <div><div class="brand-name">LanCloud</div><div class="brand-sub">局域网私有云</div></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="files" onclick="switchView('files')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>我的网盘</button>
+      <button class="nav-item" data-view="shares" onclick="switchView('shares')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M8.6 10.5l6.8-4"/></svg>分享管理</button>
+      <button class="nav-item" data-view="trash" onclick="switchView('trash')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>回收站</button>
+      <button class="nav-item" id="nav-admin" style="display:none" onclick="location.href='/admin'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.6h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1h.1a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>管理面板</button>
+    </nav>
+    <div class="side-user">
+      <div class="storage-box">
+        <div class="bar"><i id="usage-bar" style="width:0%"></i></div>
+        <div class="txt" id="usage-txt">计算中…</div>
+      </div>
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">客</div>
+        <div class="user-meta">
+          <div class="uname" id="user-name">-</div>
+          <div class="urole" id="user-role">-</div>
+        </div>
+        <button class="logout-btn" title="退出登录" onclick="doLogout()">⎋</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- 文件视图 -->
+    <section id="view-files">
+      <div class="topbar">
+        <div class="crumbs" id="crumbs"></div>
+        <div class="topbar-actions">
+          <div class="search-box">
+            <input id="search-input" placeholder="搜索文件…" onkeydown="if(event.key==='Enter')doSearch()">
+            <span class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+          </div>
+          <button class="btn" onclick="openNewFolder()">+ 新建文件夹</button>
+          <button class="btn primary" onclick="document.getElementById('file-input').click()">↑ 上传</button>
+          <input type="file" id="file-input" multiple style="display:none" onchange="handleSelect(event)">
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-toolbar">
+          <span id="dir-count" style="font-size:12.5px;color:var(--text-2)"></span>
+          <div class="spacer"></div>
+          <div class="view-toggle">
+            <button id="vt-grid" class="active" onclick="setView('grid')">网格</button>
+            <button id="vt-list" onclick="setView('list')">列表</button>
+          </div>
+        </div>
+        <div class="drop-zone" id="drop-zone">松开鼠标，把文件拖到这里上传</div>
+        <div id="file-grid" class="file-grid"></div>
+        <div id="file-list" class="file-list">
+          <table><thead><tr><th style="width:44%">名称</th><th>大小</th><th>修改时间</th><th style="width:120px">操作</th></tr></thead><tbody id="file-list-body"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 分享视图 -->
+    <section id="view-shares" style="display:none">
+      <div class="topbar"><div class="crumbs"><span class="cur">分享管理</span></div></div>
+      <div class="panel">
+        <div class="data-table-wrap"><table class="data-table">
+          <thead><tr><th>分享名称</th><th>路径</th><th>创建时间</th><th>链接</th><th style="width:90px">操作</th></tr></thead>
+          <tbody id="shares-body"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- 回收站视图 -->
+    <section id="view-trash" style="display:none">
+      <div class="topbar">
+        <div class="crumbs"><span class="cur">回收站</span></div>
+        <div class="topbar-actions"><button class="btn danger" onclick="emptyTrash()">清空回收站</button></div>
+      </div>
+      <div class="panel">
+        <table class="data-table">
+          <thead><tr><th>名称</th><th>类型</th><th>删除时间</th><th style="width:160px">操作</th></tr></thead>
+          <tbody id="trash-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="foot-note">LanCloud · 数据存储在本机 data 目录，不上传任何第三方服务器</div>
+  </main>
+</div>
+
+<!-- 模态框容器 -->
+<div id="modal-root"></div>
+<div id="toast-box"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

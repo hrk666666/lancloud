@@ -1,0 +1,15 @@
+[Unit]
+Description=LanCloud 局域网私有云网盘
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lancloud
+# 按需修改用户；DNS 端口 53 需要 root 或 setcap，普通用户可改用高端口
+User=root
+ExecStart=/opt/lancloud/.venv/bin/python /opt/lancloud/run.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
