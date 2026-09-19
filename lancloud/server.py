@@ -9,8 +9,8 @@ from pathlib import Path
 
 from fastapi import (BackgroundTasks, Cookie, FastAPI, File, HTTPException,
                      Query, Request, UploadFile)
-from fastapi.responses import (FileResponse, JSONResponse, Response,
-                               StreamingResponse)
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, Response, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 
 from . import auth, certs, config, mounts, shares, storage
@@ -34,6 +34,51 @@ STATIC_DIR = BASE / "static"
 TEMPLATE_DIR = BASE / "templates"
 
 app = FastAPI(title="LanCloud 局域网私有云网盘", docs_url=None, redoc_url=None)
+
+
+# ---------------- 劫持落地页（把劫持域名解析到本机后，按 Host 返回跳转/页面） ----------------
+_DEFAULT_LANDING = """<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>此站点已被接管</title>
+<style>
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;margin:0;min-height:100vh;
+display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e 60%,#0f3460);
+color:#fff}
+.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;
+padding:36px 40px;max-width:480px;margin:24px;text-align:center;backdrop-filter:blur(6px)}
+h1{margin:0 0 10px;font-size:22px}.ip{color:#9fd8ff;font-weight:600}
+.btn{display:inline-block;margin-top:18px;padding:10px 22px;border-radius:10px;background:#3b82f6;
+color:#fff;text-decoration:none;font-size:15px}
+.note{margin-top:16px;font-size:12px;color:rgba(255,255,255,.55)}
+</style></head><body>
+<div class="card">
+  <h1>🌐 域名已被接管</h1>
+  <p>「<b>{domain}</b>」在本局域网内由 <span class="ip">{ip}</span> 提供内容</p>
+  <p style="font-size:14px;color:rgba(255,255,255,.75)">当前返回的是自定义落地页，可在「域名定向」中改为跳转网址或指向网盘。</p>
+  <a class="btn" href="http://{ip}:{port}" target="_blank">打开本机网盘 →</a>
+  <div class="note">LanCloud · 局域网私有云 · 仅限自有网络使用</div>
+</div></body></html>"""
+
+
+@app.middleware("http")
+async def hijack_landing(request: Request, call_next):
+    host = (request.headers.get("host") or "").split(":")[0].strip().lower()
+    if host:
+        for d in config.load_domains():
+            if d.get("domain") == host and d.get("enabled", True) \
+                    and d.get("mode") in ("redirect", "page"):
+                if d["mode"] == "redirect" and d.get("url"):
+                    return RedirectResponse(d["url"], status_code=302)
+                if d["mode"] == "page":
+                    cfg = config.load_config()
+                    ips = lan_ips()
+                    html = (d.get("html") or _DEFAULT_LANDING)
+                    html = html.replace("{domain}", host) \
+                        .replace("{ip}", ips[0] if ips else "") \
+                        .replace("{port}", str(cfg.get("web_port", 8080)))
+                    return HTMLResponse(html)
+    return await call_next(request)
 
 # ---------------- 全局 DNS 服务单例 ----------------
 def _make_dns():
@@ -684,10 +729,15 @@ def dns_domains_add(body: dict, user: str = Cookie(None, alias="lc_session")):
     require_admin_from_cookie(user)
     domain = (body.get("domain") or "").strip().lower().rstrip(".")
     ip = (body.get("ip") or "").strip()
+    mode = body.get("mode") or "ip"
     if not _DOMAIN_RE.match(domain):
         raise HTTPException(400, "域名格式不正确（示例：pan.lan）")
-    if not _IP_RE.match(ip):
+    if mode not in ("ip", "redirect", "page"):
+        raise HTTPException(400, "接管模式必须是 ip / redirect / page")
+    if mode == "ip" and not _IP_RE.match(ip):
         raise HTTPException(400, "IP 格式不正确（示例：192.168.1.100）")
+    if mode == "redirect" and not (body.get("url") or "").strip():
+        raise HTTPException(400, "跳转模式需要填写目标网址（如 https://www.baidu.com）")
     items = config.load_domains()
     for d in items:
         if d["domain"] == domain:
@@ -696,6 +746,9 @@ def dns_domains_add(body: dict, user: str = Cookie(None, alias="lc_session")):
         "id": uuid.uuid4().hex[:8],
         "domain": domain,
         "ip": ip,
+        "mode": mode,
+        "url": (body.get("url") or "").strip(),
+        "html": (body.get("html") or "").strip(),
         "enabled": True,
         "note": (body.get("note") or "").strip(),
         "created": int(time.time()),
@@ -717,6 +770,15 @@ def dns_domains_update(domain_id: str, body: dict,
                 if not _IP_RE.match(body["ip"].strip()):
                     raise HTTPException(400, "IP 格式不正确")
                 d["ip"] = body["ip"].strip()
+            if "mode" in body:
+                mode = body["mode"]
+                if mode not in ("ip", "redirect", "page"):
+                    raise HTTPException(400, "接管模式必须是 ip / redirect / page")
+                d["mode"] = mode
+            if "url" in body:
+                d["url"] = str(body["url"]).strip()
+            if "html" in body:
+                d["html"] = str(body["html"]).strip()
             if "note" in body:
                 d["note"] = str(body["note"]).strip()
             config.save_domains(items)
@@ -811,6 +873,7 @@ def hijack_status(user: str = Cookie(None, alias="lc_session")):
 def hijack_start(body: dict = None, user: str = Cookie(None, alias="lc_session")):
     require_admin_from_cookie(user)
     global _hijack_engine
+    body = body or {}
     if not _hijack_supported():
         raise HTTPException(400, "方案 C 仅支持 Windows 绿色版（Linux 用 scripts/arp_hijack.py）")
     if not win_hijack.is_admin():
@@ -825,15 +888,51 @@ def hijack_start(body: dict = None, user: str = Cookie(None, alias="lc_session")
     if not gw_mac:
         raise HTTPException(400, "未获取到网关 MAC：请先让本机访问一次外网（如打开浏览器）后重试")
     net["gw_mac"] = gw_mac
-    targets = win_hijack.discover_targets(net)
+    # 接管范围：优先用请求指定 / 已保存配置；否则自动扫描全网段
+    targets = body.get("targets")
     if not targets:
-        raise HTTPException(400, "未发现局域网内其他设备（请确认设备已连接同一网络）")
+        cfg = config.load_config()
+        targets = cfg.get("hijack_targets") or {}
+    if targets:
+        targets = {str(k): str(v) for k, v in targets.items() if str(k) not in (net["gw"], net["ip"])}
+    if not targets:
+        targets = win_hijack.scan_subnet(net)
+    if not targets:
+        raise HTTPException(400, "未发现局域网内其他设备（请先扫描，或确认设备已连接同一网络）")
     cfg = config.load_config()
     engine = win_hijack.HijackEngine(net, int(cfg.get("dns_port", 53)))
     engine.start(targets)
     _hijack_engine = engine
     return {"ok": True, "targets": list(targets),
             "message": f"已接管 {len(targets)} 台设备（DNS 零配置自动生效）"}
+
+
+@app.post("/api/hijack/scan")
+def hijack_scan(body: dict = None, user: str = Cookie(None, alias="lc_session")):
+    """扫描整个局域网子网，返回在线设备列表（含 MAC）"""
+    require_admin_from_cookie(user)
+    if not _hijack_supported():
+        raise HTTPException(400, "方案 C 仅支持 Windows 绿色版")
+    net = win_hijack.get_network_info()
+    devices = win_hijack.scan_subnet(net)
+    cfg = config.load_config()
+    saved = cfg.get("hijack_targets") or {}
+    return {"ok": True, "net": net, "devices": devices,
+            "saved": saved}
+
+
+@app.post("/api/hijack/targets")
+def hijack_save_targets(body: dict, user: str = Cookie(None, alias="lc_session")):
+    """保存接管范围（下次一键接管直接使用，无需重复扫描）"""
+    require_admin_from_cookie(user)
+    if not _hijack_supported():
+        raise HTTPException(400, "方案 C 仅支持 Windows 绿色版")
+    targets = {str(k): str(v) for k, v in (body.get("targets") or {}).items()}
+    cfg = config.load_config()
+    cfg["hijack_targets"] = targets
+    config.save_config(cfg)
+    return {"ok": True, "targets": targets,
+            "message": f"已保存接管范围（{len(targets)} 台）"}
 
 
 @app.post("/api/hijack/stop")

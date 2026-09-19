@@ -138,6 +138,18 @@
                 <button class="btn primary sm" id="btn-hijack-start" onclick="hijackCStart()">一键接管（自动装驱动）</button>
                 <button class="btn sm" id="btn-hijack-stop" onclick="hijackCStop()" style="display:none">停止并恢复</button>
                 <button class="btn sm" onclick="loadHijackC()">刷新状态</button>
+                <button class="btn sm" id="btn-hijack-scan" onclick="hijackScan()">扫描全部设备…</button>
+              </div>
+              <div id="scan-panel" style="display:none;margin-top:10px;border:1px solid var(--border);border-radius:12px;padding:12px">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <b>局域网设备</b>
+                  <button class="btn sm" onclick="scanSelectAll(true)">全选</button>
+                  <button class="btn sm" onclick="scanSelectAll(false)">清空</button>
+                  <button class="btn sm" onclick="scanSelectAlive()">只选在线</button>
+                  <button class="btn primary sm" onclick="hijackSaveTargets()">保存并一键接管</button>
+                  <span id="scan-hint" style="color:var(--text-2);font-size:12px"></span>
+                </div>
+                <div id="scan-devices" style="margin-top:8px;max-height:200px;overflow:auto"></div>
               </div>
               <div class="log-box" id="hijack-c-log" style="margin-top:8px;max-height:130px">（暂无记录）</div>
             </div>
@@ -164,18 +176,29 @@
 
         <!-- 域名定向 -->
         <div class="tab-pane" id="pane-domains">
-          <div class="notice info">原理：本机充当局域网 DNS 服务器，命中下方配置的域名时返回你指定的 IP；其余域名自动转发给上游 DNS（不影响正常上网）。</div>
+          <div class="notice info">原理：本机充当局域网 DNS 服务器，命中下方配置的域名时按"接管模式"处理；其余域名自动转发上游 DNS（不影响正常上网）。
+            三种模式：<b>IP 直达</b>（解析到指定 IP，如网盘）、<b>跳转网址</b>（打开该域名即跳转到其他网站）、<b>自定义页面</b>（显示你写的落地页）。</div>
 
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-            <input class="input" id="dns-domain" placeholder="域名，如 pan.lan" style="max-width:220px">
-            <input class="input" id="dns-ip" placeholder="目标 IP（默认本机，可自动填）" style="max-width:220px">
-            <input class="input" id="dns-note" placeholder="备注（可选）" style="max-width:180px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+            <input class="input" id="dns-domain" placeholder="域名，如 pan.lan 或 baidu.com" style="max-width:230px">
+            <select class="input" id="dns-mode" style="max-width:150px" onchange="modeFields()">
+              <option value="ip">IP 直达</option>
+              <option value="redirect">跳转网址</option>
+              <option value="page">自定义页面</option>
+            </select>
+            <input class="input" id="dns-ip" placeholder="目标 IP（默认本机）" style="max-width:200px">
+            <input class="input" id="dns-url" placeholder="跳转网址，如 https://pan.baidu.com" style="max-width:260px;display:none">
+            <input class="input" id="dns-note" placeholder="备注（可选）" style="max-width:160px">
             <button class="btn primary" onclick="addDomain()">+ 添加映射</button>
             <button class="btn" onclick="fillSelfIp()">自动填本机 IP</button>
           </div>
+          <div style="margin-bottom:12px;display:none" id="dns-html-wrap">
+            <label class="mini-label">自定义落地页 HTML（支持占位符 {domain} {ip} {port}，留空用默认页）</label>
+            <textarea class="input" id="dns-html" rows="4" placeholder="<h1>此站点已被接管</h1>…"></textarea>
+          </div>
 
           <table class="data-table">
-            <thead><tr><th>域名</th><th>指向 IP</th><th>启用</th><th>备注</th><th style="width:110px">操作</th></tr></thead>
+            <thead><tr><th>域名</th><th>模式</th><th>目标</th><th>启用</th><th>备注</th><th style="width:130px">操作</th></tr></thead>
             <tbody id="domains-body"></tbody>
           </table>
         </div>

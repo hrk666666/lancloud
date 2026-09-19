@@ -116,7 +116,7 @@ def install_driver() -> str:
 def _parse_ipconfig(text: str):
     """从 ipconfig 输出提取 (网关IP, 本机IP, 本机MAC)。中文/英文输出兼容。"""
     ip_re = r"(\d{1,3}(?:\.\d{1,3}){3})"
-    gw = my_ip = mac = None
+    gw = my_ip = mac = mask = None
     section = {}
     for raw in text.splitlines():
         line = raw.strip()
@@ -130,6 +130,8 @@ def _parse_ipconfig(text: str):
                 my_ip = section["ip"]
             if section.get("mac") and mac is None:
                 mac = section["mac"]
+            if section.get("mask") and mask is None:
+                mask = section["mask"]
             section = {}
             continue
         m = re.search(r"IPv4[^\d]*?" + ip_re, line)
@@ -142,13 +144,17 @@ def _parse_ipconfig(text: str):
         m = re.search(r"(?:默认网关|Default Gateway)[^\d]*?" + ip_re, line)
         if m:
             section["gw"] = m.group(1)
+        m = re.search(r"(?:子网掩码|Subnet Mask)[^\d]*?" + ip_re, line)
+        if m:
+            section["mask"] = m.group(1)
     if section.get("gw") and gw is None:
         gw = section["gw"]
     if gw is None:
         return None
     my_ip = section.get("ip") or my_ip
     mac = section.get("mac") or mac
-    return {"gw": gw, "ip": my_ip, "mac": mac}
+    mask = section.get("mask") or mask
+    return {"gw": gw, "ip": my_ip, "mac": mac, "mask": mask}
 
 
 def get_network_info():
@@ -181,6 +187,40 @@ def _parse_arp(text: str, exclude=()):
 
 
 def discover_targets(net: dict) -> dict:
+    out = subprocess.run(["arp", "-a"], capture_output=True, text=True,
+                         timeout=15).stdout
+    return _parse_arp(out, exclude={net["gw"], net["ip"]})
+
+
+def scan_subnet(net: dict, progress=None) -> dict:
+    """扫描整个局域网子网，返回在线设备 {ip: mac}（排除网关与本机）。
+
+    步骤：ping 全网段（并发 32，唤醒每台设备的 ARP 表）→ arp -a 取 MAC。
+    相比只读现有 ARP 表，能发现刚接入、未通信过的所有设备。
+    """
+    import concurrent.futures
+    import ipaddress
+    mask = net.get("mask") or "255.255.255.0"
+    try:
+        net4 = ipaddress.IPv4Network(f"{net['ip']}/{mask}", strict=False)
+    except Exception:
+        net4 = ipaddress.IPv4Network(f"{net['ip']}/24", strict=False)
+    hosts = [str(h) for h in net4.hosts()
+             if str(h) != net["ip"] and str(h) != net["gw"]]
+
+    def ping(ip):
+        try:
+            subprocess.run(["ping", "-n", "1", "-w", "250", ip],
+                           capture_output=True, text=True, timeout=2)
+        except Exception:
+            pass
+        return ip
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as ex:
+        for i, _ in enumerate(ex.map(ping, hosts)):
+            if progress and i % 50 == 0:
+                progress(i, len(hosts))
+    time.sleep(0.4)  # 等待 ARP 表刷新
     out = subprocess.run(["arp", "-a"], capture_output=True, text=True,
                          timeout=15).stdout
     return _parse_arp(out, exclude={net["gw"], net["ip"]})

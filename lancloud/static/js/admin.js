@@ -104,35 +104,107 @@ async function toggleDns(forceStart) {
 }
 
 // ---------- 域名映射 ----------
+function modeName(m) { return m === "redirect" ? "跳转网址" : m === "page" ? "自定义页面" : "IP 直达"; }
+
+function modeFields() {
+  const m = document.getElementById("dns-mode").value;
+  document.getElementById("dns-url").style.display = m === "redirect" ? "" : "none";
+  document.getElementById("dns-html-wrap").style.display = m === "page" ? "" : "none";
+}
+
 async function loadDomains() {
   let items = [];
   try { items = (await api("/api/dns/domains")).items; } catch (e) {}
   const body = document.getElementById("domains-body");
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="5"><div class="empty" style="padding:20px">还没有域名映射。添加一个试试，例如 <b>pan.lan</b> → 你的 IP。</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="6"><div class="empty" style="padding:20px">还没有域名映射。添加一个试试，例如 <b>pan.lan</b> → 你的 IP，或劫持 <b>baidu.com</b> 跳转到其他网站。</div></td></tr>';
     return;
   }
-  body.innerHTML = items.map((d) => `
-    <tr>
+  body.innerHTML = items.map((d) => {
+    const mode = d.mode || "ip";
+    const target = mode === "redirect" ? (d.url || "") : mode === "page" ? "自定义落地页" : d.ip;
+    return `<tr>
       <td><b>${esc(d.domain)}</b></td>
-      <td style="color:var(--text-2)">${esc(d.ip)}</td>
+      <td>
+        <select class="input sm" onchange="changeMode('${d.id}', this.value)" title="接管模式">
+          <option value="ip" ${mode === "ip" ? "selected" : ""}>IP 直达</option>
+          <option value="redirect" ${mode === "redirect" ? "selected" : ""}>跳转网址</option>
+          <option value="page" ${mode === "page" ? "selected" : ""}>自定义页面</option>
+        </select>
+      </td>
+      <td style="color:var(--text-2);word-break:break-all;max-width:220px">${esc(target)}</td>
       <td><label class="switch"><input type="checkbox" ${d.enabled ? "checked" : ""} onchange="toggleDomain('${d.id}', this.checked)"><i></i></label></td>
       <td style="color:var(--text-2)">${esc(d.note || "")}</td>
       <td><div class="row-actions">
+        <button class="btn sm" onclick="editDomain('${d.id}','${mode}')">编辑</button>
         <button class="btn sm danger" onclick="delDomain('${d.id}')">删除</button>
       </div></td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
+}
+
+async function changeMode(id, mode) {
+  const body = { mode };
+  if (mode === "redirect") {
+    const url = prompt("打开该域名后跳转到哪个网址？（含 https://）", "https://");
+    if (!url) { loadDomains(); return; }
+    body.url = url;
+  } else if (mode === "page") {
+    const html = prompt("自定义落地页 HTML（留空使用默认页）：", "");
+    if (html === null) { loadDomains(); return; }
+    body.html = html;
+  }
+  try {
+    await api("/api/dns/domains/" + id, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    toast("模式已更新", "ok");
+  } catch (e) { toast(e.message, "err"); }
+  loadDomains();
+}
+
+async function editDomain(id, mode) {
+  if (mode === "redirect") {
+    const url = prompt("跳转网址：", "");
+    if (url === null) return;
+    await api("/api/dns/domains/" + id, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    toast("已更新", "ok"); loadDomains();
+  } else if (mode === "page") {
+    const html = prompt("自定义落地页 HTML（留空用默认页）：", "");
+    if (html === null) return;
+    await api("/api/dns/domains/" + id, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html }),
+    });
+    toast("已更新", "ok"); loadDomains();
+  } else {
+    const ip = prompt("目标 IP：", "");
+    if (ip === null) return;
+    await api("/api/dns/domains/" + id, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ip }),
+    });
+    toast("已更新", "ok"); loadDomains();
+  }
 }
 
 async function addDomain() {
   const domain = document.getElementById("dns-domain").value.trim();
+  const mode = document.getElementById("dns-mode").value;
   const ip = document.getElementById("dns-ip").value.trim();
+  const url = document.getElementById("dns-url").value.trim();
+  const html = document.getElementById("dns-html").value.trim();
   const note = document.getElementById("dns-note").value.trim();
   if (!domain) { toast("请填写域名", "err"); return; }
+  if (mode === "ip" && !ip) { toast("IP 模式需要目标 IP（可点「自动填本机 IP」）", "err"); return; }
   try {
     await api("/api/dns/domains", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ domain, ip, note }),
+      body: JSON.stringify({ domain, ip, mode, url, html, note }),
     });
     toast("映射已添加", "ok");
     document.getElementById("dns-domain").value = "";
@@ -276,6 +348,74 @@ async function hijackCStop() {
     const r = await api("/api/hijack/stop", { method: "POST" });
     toast(r.message || "已停止", "ok");
     loadHijackC();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ---------- 全设备扫描与接管范围 ----------
+let SCAN_DEVICES = {};
+
+async function hijackScan() {
+  const panel = document.getElementById("scan-panel");
+  const hint = document.getElementById("scan-hint");
+  panel.style.display = "";
+  hint.textContent = "正在扫描整个局域网（ping 探测全网段，约 5~15 秒）…";
+  document.getElementById("scan-devices").innerHTML = "";
+  try {
+    const r = await api("/api/hijack/scan", { method: "POST" });
+    SCAN_DEVICES = r.devices || {};
+    const saved = r.saved || {};
+    const ips = Object.keys(SCAN_DEVICES);
+    if (!ips.length) {
+      document.getElementById("scan-devices").innerHTML =
+        '<div style="color:var(--text-2);padding:8px">未发现其他设备（确认它们与电脑连同一 WiFi 且已开机）</div>';
+      hint.textContent = "扫描完成：0 台";
+      return;
+    }
+    hint.textContent = `扫描完成：发现 ${ips.length} 台在线设备`;
+    renderScanList(saved);
+  } catch (e) {
+    hint.textContent = "";
+    toast(e.message, "err");
+  }
+}
+
+function renderScanList(saved) {
+  const box = document.getElementById("scan-devices");
+  box.innerHTML = Object.entries(SCAN_DEVICES).map(([ip, mac]) => {
+    const checked = saved && saved[ip] ? "checked" : "";
+    return `<label style="display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:8px;cursor:pointer">
+      <input type="checkbox" data-ip="${ip}" ${checked}>
+      <code>${esc(ip)}</code>
+      <span style="color:var(--text-2);font-size:12px">${esc(mac)}</span>
+      <span class="badge ok" style="font-size:11px">在线</span>
+    </label>`;
+  }).join("");
+}
+
+function scanChecked() {
+  const out = {};
+  document.querySelectorAll("#scan-devices input[data-ip]:checked").forEach((c) => {
+    out[c.dataset.ip] = SCAN_DEVICES[c.dataset.ip];
+  });
+  return out;
+}
+
+function scanSelectAll(on) {
+  document.querySelectorAll("#scan-devices input[data-ip]").forEach((c) => (c.checked = on));
+}
+
+function scanSelectAlive() { scanSelectAll(true); }
+
+async function hijackSaveTargets() {
+  const targets = scanChecked();
+  if (!Object.keys(targets).length) { toast("请先勾选要接管的设备", "err"); return; }
+  try {
+    const r = await api("/api/hijack/targets", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targets }),
+    });
+    toast(r.message, "ok");
+    hijackCStart();
   } catch (e) { toast(e.message, "err"); }
 }
 
