@@ -56,6 +56,7 @@ jobs:
             --hidden-import uvicorn.protocols.websockets.auto \
             --hidden-import uvicorn.lifespan \
             --hidden-import uvicorn.lifespan.on \
+            --collect-all pydivert \
             --add-data "lancloud/templates;lancloud/templates" \
             --add-data "lancloud/static;lancloud/static" \
             run.py
@@ -75,6 +76,14 @@ jobs:
           局域网访问：
           - 其他设备访问 http://你的IP:8080（启动窗口会打印所有可用地址）
           - 域名定向（DNS 劫持）在登录后「管理面板」中配置，并附有图文教程
+
+          全自动接管（方案 C，Windows 专属）：
+          1. 以管理员身份运行 LanCloud.exe（右键 → 以管理员身份运行）
+          2. 管理面板 → 劫持向导 → 方案 C → 一键接管
+          3. 程序自动安装内置内核驱动，同 WiFi 下所有设备 DNS 自动送到本机，
+             被劫持域名直接打开你的网盘，其他网站照常上网
+          4. 点击「停止并恢复」自动恢复，设备无需任何设置
+             （若杀毒软件拦截驱动安装，请放行 LanCloud 并确认以管理员运行）
 
           数据位置：
           - 所有数据保存在本目录 data/ 下，备份时复制整个 data 文件夹
@@ -121,6 +130,13 @@ jobs:
             - **劫持向导**：4 步指引 + **一键诊断** + **实时查询日志**，快速定位不生效原因
             - 未匹配域名自动转发上游，不影响正常上网
             - 其他设备**零配置**：仅需路由器 / 设备把 DNS 指向本机
+
+            ### 🚀 方案 C：Windows 全自动接管（v2.1.0 新增）
+            - **设备一个设置都不用做**：自动安装内置 WinDivert 内核驱动（免下载）
+            - 本机伪装成网关，同 WiFi 下所有设备的 DNS 查询自动送到本机
+            - 被劫持域名直接打开你的网盘，其他网站照常上网；停止后自动恢复
+            - 管理面板「劫持向导 → 方案 C」一键接管 / 停止，实时状态与日志
+            - 使用前提：管理员身份运行 + 同一局域网 + 仅限自有 / 已授权网络
 
             ### 自签名 HTTPS
             - 自动生成 CA + 服务器证书（覆盖局域网 IP 与全部域名映射）

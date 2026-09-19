@@ -15,6 +15,11 @@ from fastapi.staticfiles import StaticFiles
 
 from . import auth, certs, config, mounts, shares, storage
 
+try:
+    from . import win_hijack
+except Exception:  # 非 Windows 环境无 pydivert 等依赖
+    win_hijack = None
+
 # 补充常见文件类型
 for _ext, _mt in [(".md", "text/markdown"),
                   (".yml", "text/yaml"), (".yaml", "text/yaml"),
@@ -775,6 +780,69 @@ def ca_download(user: str = Cookie(None, alias="lc_session")):
         certs.ensure_certs([], lan_ips())
     return FileResponse(ca, media_type="application/x-x509-ca-cert",
                         filename="LanCloud-CA.crt")
+
+
+# ---------------- 方案 C：Windows ARP 全自动接管 ----------------
+_hijack_engine = None
+
+
+def _hijack_supported():
+    return win_hijack is not None and win_hijack.is_windows()
+
+
+@app.get("/api/hijack/status")
+def hijack_status(user: str = Cookie(None, alias="lc_session")):
+    require_admin_from_cookie(user)
+    if not _hijack_supported():
+        return {"supported": False,
+                "reason": "方案 C 仅支持 Windows 绿色版；Linux 请使用 scripts/arp_hijack.py"}
+    return {
+        "supported": True,
+        "admin": win_hijack.is_admin(),
+        "driver": win_hijack.driver_installed(),
+        "running": bool(_hijack_engine and _hijack_engine.running),
+        "targets": list(_hijack_engine.targets) if _hijack_engine else [],
+        "log": [{"t": t, "msg": m} for t, m in
+                (_hijack_engine.log if _hijack_engine else [])],
+    }
+
+
+@app.post("/api/hijack/start")
+def hijack_start(body: dict = None, user: str = Cookie(None, alias="lc_session")):
+    require_admin_from_cookie(user)
+    global _hijack_engine
+    if not _hijack_supported():
+        raise HTTPException(400, "方案 C 仅支持 Windows 绿色版（Linux 用 scripts/arp_hijack.py）")
+    if not win_hijack.is_admin():
+        raise HTTPException(400, "需要管理员权限：请右键 LanCloud.exe → 以管理员身份运行")
+    if _hijack_engine and _hijack_engine.running:
+        return {"ok": True, "message": "已在运行中"}
+    msg = win_hijack.install_driver()
+    if "成功" not in msg and "就绪" not in msg:
+        raise HTTPException(500, f"驱动安装失败：{msg}")
+    net = win_hijack.get_network_info()
+    gw_mac = win_hijack.get_gateway_mac(net)
+    if not gw_mac:
+        raise HTTPException(400, "未获取到网关 MAC：请先让本机访问一次外网（如打开浏览器）后重试")
+    net["gw_mac"] = gw_mac
+    targets = win_hijack.discover_targets(net)
+    if not targets:
+        raise HTTPException(400, "未发现局域网内其他设备（请确认设备已连接同一网络）")
+    cfg = config.load_config()
+    engine = win_hijack.HijackEngine(net, int(cfg.get("dns_port", 53)))
+    engine.start(targets)
+    _hijack_engine = engine
+    return {"ok": True, "targets": list(targets),
+            "message": f"已接管 {len(targets)} 台设备（DNS 零配置自动生效）"}
+
+
+@app.post("/api/hijack/stop")
+def hijack_stop(user: str = Cookie(None, alias="lc_session")):
+    require_admin_from_cookie(user)
+    global _hijack_engine
+    if _hijack_engine and _hijack_engine.running:
+        _hijack_engine.stop()
+    return {"ok": True, "message": "已停止并恢复网络"}
 
 
 # ---------------- 诊断 ----------------

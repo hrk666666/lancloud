@@ -125,6 +125,24 @@
             </div>
           </div>
 
+          <div class="tutorial-step" style="border:1px solid var(--accent)">
+            <div class="ts-num" style="background:var(--accent)">C</div>
+            <div class="ts-body">
+              <h4>方案 C（Windows 专属）：全自动接管 —— 设备一个设置都不用做</h4>
+              <p>自动安装内置内核驱动（WinDivert，无需下载），本机向全网广播"网关是我"，
+                <b>同 WiFi 下所有设备的 DNS 查询自动送到本机</b>，被劫持域名直接打开你的网盘，
+                其他网站照常上网。停止后自动广播恢复，设备无需任何操作。</p>
+              <p style="margin-top:6px;color:var(--text-2)">使用前提：本机以管理员身份运行、与目标设备同一局域网。首次需在「域名定向」添加劫持映射。</p>
+              <div id="hijack-c-status" class="notice" style="margin-top:8px">检测中…</div>
+              <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn primary sm" id="btn-hijack-start" onclick="hijackCStart()">一键接管（自动装驱动）</button>
+                <button class="btn sm" id="btn-hijack-stop" onclick="hijackCStop()" style="display:none">停止并恢复</button>
+                <button class="btn sm" onclick="loadHijackC()">刷新状态</button>
+              </div>
+              <div class="log-box" id="hijack-c-log" style="margin-top:8px;max-height:130px">（暂无记录）</div>
+            </div>
+          </div>
+
           <div class="tutorial-step">
             <div class="ts-num">4</div>
             <div class="ts-body">

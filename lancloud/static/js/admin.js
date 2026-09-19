@@ -42,7 +42,7 @@ function switchTab(name) {
   if (name === "users") loadUsers();
   if (name === "mounts") loadMounts();
   if (name === "https") loadHttpsStatus();
-  if (name === "wizard") { loadDnsLog(); }
+  if (name === "wizard") { loadDnsLog(); loadHijackC(); }
 }
 
 // ---------- 概览 ----------
@@ -224,6 +224,59 @@ async function loadDnsLog() {
     const p = (x) => String(x).padStart(2, "0");
     return `<div><code style="color:var(--text-2)">${d.getHours()}:${p(d.getMinutes())}:${p(d.getSeconds())}</code>  <b>${esc(client)}</b> → ${esc(qname)}　${esc(action)}</div>`;
   }).join("") + (items.length > 30 ? `<div style="color:var(--text-2);font-size:12px">…仅显示最近 30 条</div>` : "");
+}
+
+// ---------- 方案 C：Windows 全自动接管 ----------
+let _hijackTimer = null;
+
+async function loadHijackC() {
+  const box = document.getElementById("hijack-c-status");
+  if (!box) return;
+  let s;
+  try { s = await api("/api/hijack/status"); } catch (e) { box.className = "notice err"; box.innerHTML = esc(e.message); return; }
+  const btnS = document.getElementById("btn-hijack-start");
+  const btnT = document.getElementById("btn-hijack-stop");
+  if (!s.supported) {
+    box.className = "notice info";
+    box.innerHTML = "<b>当前系统不支持方案 C：</b>" + esc(s.reason || "仅 Windows 绿色版可用");
+    btnS.style.display = "none"; btnT.style.display = "none";
+    return;
+  }
+  btnS.style.display = s.running ? "none" : "";
+  btnT.style.display = s.running ? "" : "none";
+  let html = "";
+  if (!s.admin) html += '<div style="color:var(--err)">⚠ 当前非管理员：请<b>右键 LanCloud.exe → 以管理员身份运行</b>后再接管。</div>';
+  html += "<div>驱动：<b>" + (s.driver ? '<span class="badge ok">已安装</span>' : '<span class="badge off">未安装（点“一键接管”自动安装）</span>') + "</b></div>";
+  html += "<div>状态：" + (s.running ? '<span class="badge ok">接管中</span> 已控制 ' + s.targets.length + " 台设备：" + esc(s.targets.join("、")) : '<span class="badge off">未运行</span>') + "</div>";
+  box.className = "notice";
+  box.innerHTML = html;
+  const lg = document.getElementById("hijack-c-log");
+  if (s.log && s.log.length) {
+    lg.innerHTML = s.log.slice(0, 15).map(([ts, msg]) => {
+      const d = new Date(ts * 1000);
+      return `<div style="font-size:12px"><span style="color:var(--text-2)">${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}</span> ${esc(msg)}</div>`;
+    }).join("");
+  } else {
+    lg.innerHTML = "（暂无记录）";
+  }
+  clearTimeout(_hijackTimer);
+  if (s.running) _hijackTimer = setTimeout(loadHijackC, 3000); // 运行中自动刷新状态
+}
+
+async function hijackCStart() {
+  try {
+    const r = await api("/api/hijack/start", { method: "POST" });
+    toast(r.message || "已接管", "ok");
+    loadHijackC();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function hijackCStop() {
+  try {
+    const r = await api("/api/hijack/stop", { method: "POST" });
+    toast(r.message || "已停止", "ok");
+    loadHijackC();
+  } catch (e) { toast(e.message, "err"); }
 }
 
 // ---------- 用户管理 ----------

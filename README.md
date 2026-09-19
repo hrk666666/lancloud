@@ -28,7 +28,9 @@
 - ✅ 内置 DNS 服务（UDP + TCP），把任意域名解析到你指定的 IP
 - ✅ **劫持向导**：分步指引 + **一键诊断**（自动自测映射是否生效）+ **实时查询日志**（可确认局域网设备是否真的来查询了）
 - ✅ 未匹配域名自动转发上游 DNS，**不影响正常上网**
-- ✅ **方案 C（进阶）**：`scripts/arp_hijack.py` ARP 欺骗脚本——设备**零配置**自动接管全网 DNS（Linux，见 [docs/ARP欺骗教程.md](docs/ARP欺骗教程.md)）
+- ✅ **方案 C（进阶·设备零配置）**：
+  - **Windows 绿色版内置**：管理面板「劫持向导 → 方案 C」一键接管——自动安装内置 WinDivert 内核驱动（免下载），本机伪装成网关，同 WiFi 下所有设备 DNS 自动送到本机，无需改路由器、无需动任何设备，停止后自动恢复
+  - **Linux**：`scripts/arp_hijack.py` ARP 欺骗脚本（见 [docs/ARP欺骗教程.md](docs/ARP欺骗教程.md)）
 - ✅ 图文教程：路由器 / 设备手动 / 手机热点 / ARP 四种接入方式
 - ✅ 明确标注 HTTPS 限制与法律边界（见下方"重要说明"）
 
@@ -89,8 +91,9 @@ start.bat
 2. 在路由器「DHCP 服务器 → 首选 DNS」填你的 IP（或单台设备手动设置 DNS）
 3. 运行「一键诊断」自测，然后其他设备打开 `http://pan.lan:8080` 直达网盘
 
-设备完全零设置：用 `sudo python3 scripts/arp_hijack.py --all --yes`（Linux，需 root），
-详见 [docs/ARP欺骗教程.md](docs/ARP欺骗教程.md)。
+设备完全零设置：
+- **Windows 绿色版**：管理面板「劫持向导 → 方案 C → 一键接管」，详见 [docs/Windows全自动接管教程.md](docs/Windows全自动接管教程.md)
+- **Linux**：`sudo python3 scripts/arp_hijack.py --all --yes`（需 root），详见 [docs/ARP欺骗教程.md](docs/ARP欺骗教程.md)
 
 ### 用户与配额管理
 打开「管理面板 → 用户管理」：
