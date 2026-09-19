@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LanCloud · 局域网私有云网盘</title>
 <link rel="stylesheet" href="/static/css/style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232F6FED'/%3E%3Cpath d='M9 21V12l7-4 7 4v9h-5v-5h-4v5z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%232F6B4F'/%3E%3Cpath d='M9 21V12l7-4 7 4v9h-5v-5h-4v5z' fill='%23fff'/%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -13,7 +13,10 @@
 <div id="login-view">
   <div class="login-card">
     <div class="login-logo">
-      <div class="logo-title">☁ LanCloud</div>
+      <div class="logo-mark">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"/></svg>
+      </div>
+      <div class="logo-title">LanCloud</div>
       <div class="logo-sub">局域网私有云网盘 · 数据只在你自己的设备上</div>
     </div>
     <div class="login-tabs">
@@ -42,20 +45,22 @@
 <div id="app-view">
   <aside class="sidebar">
     <div class="brand">
-      <svg width="34" height="34" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="#2F6FED"/><path d="M9 22V12.5l8-4.5 8 4.5V22h-5.5v-5.5h-5V22z" fill="#fff"/><circle cx="24" cy="24" r="4" fill="#3B9EFF" stroke="#fff" stroke-width="1.5"/></svg>
+      <div class="brand-mark">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"/></svg>
+      </div>
       <div><div class="brand-name">LanCloud</div><div class="brand-sub">局域网私有云</div></div>
     </div>
     <nav class="nav">
       <button class="nav-item active" data-view="files" onclick="switchView('files')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>我的网盘</button>
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47Z"/></svg>我的网盘</button>
       <button class="nav-item" data-view="mounts" onclick="switchView('mounts')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>共享文件夹</button>
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,64H32A16,16,0,0,0,16,80v96a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V80A16,16,0,0,0,224,64Zm0,112H32V80H224v96Zm-24-48a12,12,0,1,1-12-12A12,12,0,0,1,200,128Z"/></svg>共享文件夹</button>
       <button class="nav-item" data-view="shares" onclick="switchView('shares')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M8.6 10.5l6.8-4"/></svg>分享管理</button>
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Zm0-128a24,24,0,1,1-24,24A24,24,0,0,1,176,32ZM64,152a24,24,0,1,1,24-24A24,24,0,0,1,64,152Zm112,72a24,24,0,1,1,24-24A24,24,0,0,1,176,224Z"/></svg>分享管理</button>
       <button class="nav-item" data-view="trash" onclick="switchView('trash')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>回收站</button>
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M96,208a8,8,0,0,1-8,8H40a24,24,0,0,1-20.77-36l34.29-59.25L39.47,124.5A8,8,0,1,1,35.33,109l32.77-8.77a8,8,0,0,1,9.8,5.66l8.79,32.77A8,8,0,0,1,81,148.5a8.37,8.37,0,0,1-2.08.27,8,8,0,0,1-7.72-5.93l-3.8-14.15L33.11,188A8,8,0,0,0,40,200H88A8,8,0,0,1,96,208Z"/></svg>回收站</button>
       <button class="nav-item" id="nav-admin" style="display:none" onclick="location.href='/admin'">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.6h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1h.1a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>管理面板</button>
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg>管理面板</button>
     </nav>
     <div class="side-user">
       <div class="storage-box">
@@ -68,7 +73,9 @@
           <div class="uname" id="user-name">-</div>
           <div class="urole" id="user-role">-</div>
         </div>
-        <button class="logout-btn" title="退出登录" onclick="doLogout()">⎋</button>
+        <button class="logout-btn" title="退出登录" onclick="doLogout()">
+          <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
+        </button>
       </div>
     </div>
   </aside>
@@ -81,21 +88,26 @@
         <div class="topbar-actions">
           <div class="search-box">
             <input id="search-input" placeholder="搜索文件…" onkeydown="if(event.key==='Enter')doSearch()">
-            <span class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+            <span class="s-ico"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg></span>
           </div>
-          <button class="btn" onclick="openNewFolder()">+ 新建文件夹</button>
-          <button class="btn" onclick="zipCurrent()" title="将当前目录打包为 zip 下载">⬇ 打包下载</button>
-          <button class="btn primary" onclick="document.getElementById('file-input').click()">↑ 上传</button>
+          <button class="btn" onclick="openNewFolder()">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z"/></svg>新建文件夹</button>
+          <button class="btn" onclick="zipCurrent()" title="将当前目录打包为 zip 下载">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg>打包下载</button>
+          <button class="btn primary" onclick="document.getElementById('file-input').click()">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></svg>上传</button>
           <input type="file" id="file-input" multiple style="display:none" onchange="handleSelect(event)">
         </div>
       </div>
       <div class="panel">
         <div class="panel-toolbar">
-          <span id="dir-count" style="font-size:12.5px;color:var(--text-2)"></span>
+          <span id="dir-count" style="font-size:12.5px;color:var(--ink-3);font-weight:500"></span>
           <div class="spacer"></div>
           <div class="view-toggle">
-            <button id="vt-grid" class="active" onclick="setView('grid')">网格</button>
-            <button id="vt-list" onclick="setView('list')">列表</button>
+            <button id="vt-grid" class="active" onclick="setView('grid')">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200,40H56A16,16,0,0,0,40,56V200a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,80H136V56h64ZM120,56v64H56V56ZM56,136h64v64H56Zm144,64H136V136h64v64Z"/></svg>网格</button>
+            <button id="vt-list" onclick="setView('list')">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M80,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H88A8,8,0,0,1,80,64Zm136,56H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>列表</button>
           </div>
         </div>
         <div class="drop-zone" id="drop-zone">松开鼠标，把文件拖到这里上传</div>
@@ -155,6 +167,28 @@
     <div class="foot-note">LanCloud · 数据存储在本机 data 目录，不上传任何第三方服务器</div>
   </main>
 </div>
+
+<!-- 批量操作栏 -->
+<div class="batch-bar" id="batch-bar">
+  <span class="bc-count" id="bc-count">已选 0 项</span>
+  <button class="btn" onclick="batchDownload()">下载</button>
+  <button class="btn danger" onclick="batchDelete()">删除</button>
+  <button class="btn" onclick="clearSelection()">取消</button>
+</div>
+
+<!-- 文件详情侧栏 -->
+<aside class="detail-panel" id="detail-panel">
+  <div class="dp-icon" id="dp-icon"></div>
+  <div class="dp-name" id="dp-name"></div>
+  <div class="dp-row"><span class="k">类型</span><span class="v" id="dp-type"></span></div>
+  <div class="dp-row"><span class="k">大小</span><span class="v" id="dp-size"></span></div>
+  <div class="dp-row"><span class="k">修改时间</span><span class="v" id="dp-mtime"></span></div>
+  <div class="dp-row"><span class="k">路径</span><span class="v" id="dp-path"></span></div>
+  <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
+    <button class="btn primary" style="flex:1" id="dp-open">打开 / 预览</button>
+    <button class="btn" style="flex:1" id="dp-close">关闭</button>
+  </div>
+</aside>
 
 <!-- 模态框容器 -->
 <div id="modal-root"></div>

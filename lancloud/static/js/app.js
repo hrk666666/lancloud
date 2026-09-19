@@ -52,7 +52,21 @@ const EXT_CAT = {
   arc: ["zip", "rar", "7z", "tar", "gz", "xz", "bz2"],
   code: [],
 };
-const EXT_COLOR = { img: "green", vid: "purple", aud: "cyan", doc: "red", arc: "orange", txt: "gray", code: "gray" };
+// ---------- Phosphor 开源图标（MIT，regular 字重统一） ----------
+const SVG = (p, w = 44) =>
+  `<svg width="${w}" height="${w}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${p}</svg>`;
+const ICON = {
+  folder: '<path d="M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47Z"/>',
+  file: '<path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/>',
+  image: '<path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM48,48H208v77.38l-24.69-24.7a16,16,0,0,0-22.62,0L53.37,208H48ZM208,208H76l96-96,36,36v60ZM96,120A24,24,0,1,0,72,96,24,24,0,0,0,96,120Zm0-32a8,8,0,1,1-8,8A8,8,0,0,1,96,88Z"/>',
+  play: '<path d="M232.4,114.49,88.32,26.35a16,16,0,0,0-16.2-.3A15.86,15.86,0,0,0,64,39.87V216.13A15.94,15.94,0,0,0,80,232a16.07,16.07,0,0,0,8.36-2.35L232.4,141.51a15.81,15.81,0,0,0,0-27ZM80,215.94V40l143.83,88Z"/>',
+  download: '<path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/>',
+  share: '<path d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Zm0-128a24,24,0,1,1-24,24A24,24,0,0,1,176,32ZM64,152a24,24,0,1,1,24-24A24,24,0,0,1,64,152Zm112,72a24,24,0,1,1,24-24A24,24,0,0,1,176,224Z"/>',
+  pencil: '<path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/>',
+  trash: '<path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/>',
+  up: '<path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/>',
+};
+const S_ICO = (key, s = 14) => SVG(ICON[key], s);
 
 function typeOf(name) {
   const ext = (name.split(".").pop() || "").toLowerCase();
@@ -60,14 +74,21 @@ function typeOf(name) {
   return "file";
 }
 
-function fileIcon(name, isDir, size) {
-  if (isDir) {
-    return '<span class="ico ico-folder"><svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></span>';
-  }
+function fileIcon(name, isDir) {
+  if (isDir) return `<span class="ico ico-folder">${SVG(ICON.folder)}</span>`;
   const t = typeOf(name);
-  const label = t === "file" ? (name.split(".").pop() || "?") : t.toUpperCase();
-  return `<span class="ico-type ${EXT_COLOR[t] || "gray"}">${label.slice(0, 4)}</span>`;
+  if (t === "img") return `<span class="ico ico-type green">${SVG(ICON.image, 30)}</span>`;
+  if (t === "vid") return `<span class="ico ico-type cyan">${SVG(ICON.play, 30)}</span>`;
+  if (t === "aud") return `<span class="ico ico-type orange">${SVG(ICON.play, 30)}</span>`;
+  if (t === "doc") return `<span class="ico ico-type purple">${SVG(ICON.file, 30)}</span>`;
+  if (t === "arc") return `<span class="ico ico-type orange">${SVG(ICON.file, 30)}</span>`;
+  return `<span class="ico ico-type gray">${SVG(ICON.file, 30)}</span>`;
 }
+
+// 当前目录项目缓存（供详情侧栏使用）
+let LAST_ITEMS = [];
+// 多选集合
+const SEL = new Set();
 
 // ---------- 登录 ----------
 let ME = null;
@@ -209,43 +230,105 @@ async function loadFiles(path) {
 }
 
 function renderItems(items) {
+  LAST_ITEMS = items;
+  SEL.clear(); updateBatchBar();
   const grid = document.getElementById("file-grid");
   const tbody = document.getElementById("file-list-body");
   if (!items.length) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">▱</div>这里空空如也<br>点击右上角「上传」或直接拖拽文件进来</div>';
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${SVG(ICON.folder, 56)}</div>这里空空如也<br>点击右上角「上传」或直接拖拽文件进来</div>`;
     tbody.innerHTML = "";
     return;
   }
   grid.innerHTML = items.map(cardHtml).join("");
-  tbody.innerHTML = items.map((it) => `<tr class="file-row" ondblclick="openItem('${esc(it.path)}',${it.is_dir})">
-      <td><div class="name-cell">${fileIcon(it.name, it.is_dir, it.size)}<span>${esc(it.name)}</span></div></td>
+  tbody.innerHTML = items.map((it) => `<tr class="file-row" data-path="${esc(it.path)}" ondblclick="openItem('${esc(it.path)}',${it.is_dir})">
+      <td><div class="name-cell">${fileIcon(it.name, it.is_dir)}<span>${esc(it.name)}</span></div></td>
       <td>${it.is_dir ? "—" : fmtSize(it.size)}</td>
       <td>${fmtTime(it.mtime)}</td>
       <td><div class="l-actions">
-        ${it.is_dir ? `<button title="打包下载" onclick="event.stopPropagation();zipItem('${esc(it.path)}')">打包</button>` : `<button title="下载" onclick="event.stopPropagation();downloadItem('${esc(it.path)}')">下载</button>`}
-        ${it.is_dir ? "" : `<button title="在线编辑" onclick="event.stopPropagation();editItem('${esc(it.path)}')">编辑</button>`}
-        <button title="分享" onclick="event.stopPropagation();shareItem('${esc(it.path)}')">分享</button>
-        <button title="重命名" onclick="event.stopPropagation();renameItem('${esc(it.path)}')">重命名</button>
-        <button title="移动" onclick="event.stopPropagation();moveItem('${esc(it.path)}')">移动</button>
-        <button title="删除" onclick="event.stopPropagation();deleteItem('${esc(it.path)}')">删除</button>
+        ${it.is_dir ? `<button title="打包下载" onclick="event.stopPropagation();zipItem('${esc(it.path)}')">${S_ICO("download",15)}</button>` : `<button title="下载" onclick="event.stopPropagation();downloadItem('${esc(it.path)}')">${S_ICO("download",15)}</button>`}
+        ${it.is_dir ? "" : `<button title="在线编辑" onclick="event.stopPropagation();editItem('${esc(it.path)}')">${S_ICO("pencil",15)}</button>`}
+        <button title="详情" onclick="event.stopPropagation();openDetail('${esc(it.path)}')">${S_ICO("file",15)}</button>
+        <button title="分享" onclick="event.stopPropagation();shareItem('${esc(it.path)}')">${S_ICO("share",15)}</button>
+        <button title="重命名" onclick="event.stopPropagation();renameItem('${esc(it.path)}')">${S_ICO("pencil",15)}</button>
+        <button title="移动" onclick="event.stopPropagation();moveItem('${esc(it.path)}')">${SVG(ICON.folder,15)}</button>
+        <button title="删除" onclick="event.stopPropagation();deleteItem('${esc(it.path)}')">${S_ICO("trash",15)}</button>
       </div></td></tr>`).join("");
 }
 
 function cardHtml(it) {
   const p = esc(it.path), n = esc(it.name);
-  return `<div class="file-card" ondblclick="openItem('${p}',${it.is_dir})">
+  const sel = SEL.has(it.path) ? " sel" : "";
+  return `<div class="file-card${sel}" data-path="${p}" onclick="toggleSelect('${p}')" ondblclick="openItem('${p}',${it.is_dir})">
     <div class="fc-actions">
-      ${it.is_dir ? `<button title="打包下载" onclick="zipItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg></button>`
-        : `<button title="下载" onclick="downloadItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg></button>`}
-      <button title="分享" onclick="shareItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M8.6 10.5l6.8-4"/></svg></button>
-      <button title="重命名" onclick="renameItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 3l4 4L8 20l-5 1 1-5z"/></svg></button>
-      <button title="删除" onclick="deleteItem('${p}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button>
+      ${it.is_dir ? `<button title="打包下载" onclick="event.stopPropagation();zipItem('${p}')">${S_ICO("download",13)}</button>`
+        : `<button title="下载" onclick="event.stopPropagation();downloadItem('${p}')">${S_ICO("download",13)}</button>`}
+      <button title="详情" onclick="event.stopPropagation();openDetail('${p}')">${S_ICO("file",13)}</button>
+      <button title="分享" onclick="event.stopPropagation();shareItem('${p}')">${S_ICO("share",13)}</button>
+      <button title="删除" onclick="event.stopPropagation();deleteItem('${p}')">${S_ICO("trash",13)}</button>
     </div>
-    <div class="fc-icon">${fileIcon(it.name, it.is_dir, it.size)}</div>
+    <div class="fc-icon">${fileIcon(it.name, it.is_dir)}</div>
     <div class="fc-name" title="${n}">${n}</div>
     <div class="fc-meta">${it.is_dir ? "文件夹" : fmtSize(it.size)} · ${fmtTime(it.mtime).slice(5, 16)}</div>
   </div>`;
 }
+
+// ---------- 多选 ----------
+function toggleSelect(path) {
+  if (SEL.has(path)) SEL.delete(path); else SEL.add(path);
+  document.querySelectorAll(".file-card").forEach((c) => {
+    if (c.dataset.path) c.classList.toggle("sel", SEL.has(c.dataset.path));
+  });
+  document.querySelectorAll(".file-list .file-row").forEach((r) => {
+    if (r.dataset.path) r.classList.toggle("sel", SEL.has(r.dataset.path));
+  });
+  updateBatchBar();
+}
+function updateBatchBar() {
+  const bar = document.getElementById("batch-bar");
+  if (!bar) return;
+  document.getElementById("bc-count").textContent = "已选 " + SEL.size + " 项";
+  bar.classList.toggle("show", SEL.size > 0);
+}
+function clearSelection() { SEL.clear(); document.querySelectorAll(".sel").forEach((c) => c.classList.remove("sel")); updateBatchBar(); }
+async function batchDelete() {
+  if (!SEL.size) return;
+  if (!confirm("确认删除选中的 " + SEL.size + " 个项目？删除后进入回收站。")) return;
+  const paths = Array.from(SEL);
+  let ok = 0;
+  for (const p of paths) {
+    try { await api("/api/fs/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: p }) }); ok++; }
+    catch (e) { toast(e.message, "err"); }
+  }
+  clearSelection(); toast("已删除 " + ok + " 项", "ok"); loadFiles(STATE.path);
+}
+function batchDownload() {
+  if (!SEL.size) return;
+  // 逐个触发浏览器下载（小文件适用）；文件夹走 zip
+  Array.from(SEL).forEach((p, i) => {
+    setTimeout(() => {
+      const it = LAST_ITEMS.find((x) => x.path === p);
+      if (it && it.is_dir) zipItem(p); else downloadItem(p);
+    }, i * 350);
+  });
+  toast("开始下载 " + SEL.size + " 个项目", "ok");
+}
+
+// ---------- 详情侧栏 ----------
+function openDetail(path) {
+  const it = LAST_ITEMS.find((x) => x.path === path);
+  if (!it) return;
+  document.getElementById("dp-icon").innerHTML = fileIcon(it.name, it.is_dir);
+  document.getElementById("dp-name").textContent = it.name;
+  document.getElementById("dp-type").textContent = it.is_dir ? "文件夹" : (typeOf(it.name) + " 文件");
+  document.getElementById("dp-size").textContent = it.is_dir ? "—" : fmtSize(it.size);
+  document.getElementById("dp-mtime").textContent = fmtTime(it.mtime);
+  document.getElementById("dp-path").textContent = it.path || "/";
+  const openBtn = document.getElementById("dp-open");
+  openBtn.onclick = () => { closeDetail(); openItem(it.path, it.is_dir); };
+  document.getElementById("dp-close").onclick = closeDetail;
+  document.getElementById("detail-panel").classList.add("show");
+}
+function closeDetail() { document.getElementById("detail-panel").classList.remove("show"); }
 
 function setView(v) {
   STATE.view = v;

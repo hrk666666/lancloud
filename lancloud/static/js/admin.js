@@ -88,7 +88,7 @@ async function loadOverview() {
   const wiz = document.getElementById("wiz-dns-status");
   if (wiz) {
     wiz.innerHTML = OVERVIEW.dns.running
-      ? `<span class="badge ok">运行中（端口 ${OVERVIEW.dns.port}）✓</span>`
+      ? `<span class="badge ok">运行中（端口 ${OVERVIEW.dns.port}）</span>`
       : `<span class="badge err">未运行</span> ${esc(OVERVIEW.dns.error || "")}`;
   }
   loadDomains();
