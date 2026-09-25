@@ -883,7 +883,10 @@ def hijack_start(body: dict = None, user: str = Cookie(None, alias="lc_session")
     msg = win_hijack.install_driver()
     if "成功" not in msg and "就绪" not in msg:
         raise HTTPException(500, f"驱动安装失败：{msg}")
-    net = win_hijack.get_network_info()
+    try:
+        net = win_hijack.get_network_info()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
     gw_mac = win_hijack.get_gateway_mac(net)
     if not gw_mac:
         raise HTTPException(400, "未获取到网关 MAC：请先让本机访问一次外网（如打开浏览器）后重试")
@@ -913,7 +916,10 @@ def hijack_scan(body: dict = None, user: str = Cookie(None, alias="lc_session"))
     require_admin_from_cookie(user)
     if not _hijack_supported():
         raise HTTPException(400, "方案 C 仅支持 Windows 绿色版")
-    net = win_hijack.get_network_info()
+    try:
+        net = win_hijack.get_network_info()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
     devices = win_hijack.scan_subnet(net)
     cfg = config.load_config()
     saved = cfg.get("hijack_targets") or {}

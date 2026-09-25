@@ -114,47 +114,57 @@ def install_driver() -> str:
 # ---------- 网络信息（纯函数便于测试） ----------
 
 def _parse_ipconfig(text: str):
-    """从 ipconfig 输出提取 (网关IP, 本机IP, 本机MAC)。中文/英文输出兼容。"""
+    """从 ipconfig 输出提取 (网关IP, 本机IP, 本机MAC)。中文(简/繁)/英文输出兼容。
+
+    修复要点：
+      1. 网关与本机 IP 取自【同一网卡段】，避免被最后一个网卡段覆盖；
+      2. 过滤 169.254.x（APIPA，DHCP 失败回退，无网关可用）地址；
+      3. 补齐繁体中文关键词（預設閘道 / 子網路遮罩 / 實體位址）。
+    """
     ip_re = r"(\d{1,3}(?:\.\d{1,3}){3})"
-    gw = my_ip = mac = mask = None
+    sections = []
     section = {}
     for raw in text.splitlines():
         line = raw.strip()
         if not line:
             continue
         # 段落边界：适配器名（无前导空格）
-        if not raw[:1].isspace() and ("适配器" in line or "adapter" in line.lower()):
-            if section.get("gw") and gw is None:
-                gw = section["gw"]
-            if section.get("ip") and my_ip is None:
-                my_ip = section["ip"]
-            if section.get("mac") and mac is None:
-                mac = section["mac"]
-            if section.get("mask") and mask is None:
-                mask = section["mask"]
+        if not raw[:1].isspace() and (
+                "适配器" in line or "adapter" in line.lower()):
+            sections.append(section)
             section = {}
             continue
         m = re.search(r"IPv4[^\d]*?" + ip_re, line)
         if m and section.get("ip") is None:
             section["ip"] = m.group(1)
-        m = re.search(r"(?:物理地址|Physical Address)[^0-9A-Fa-f]*?"
+        m = re.search(r"(?:物理地址|實體位址|Physical Address)[^0-9A-Fa-f]*?"
                       r"([0-9A-Fa-f]{2}(?:-[0-9A-Fa-f]{2}){5})", line)
         if m and section.get("mac") is None:
             section["mac"] = m.group(1).replace("-", ":").lower()
-        m = re.search(r"(?:默认网关|Default Gateway)[^\d]*?" + ip_re, line)
+        m = re.search(r"(?:默认网关|預設閘道|Default Gateway)[^\d]*?" + ip_re, line)
         if m:
             section["gw"] = m.group(1)
-        m = re.search(r"(?:子网掩码|Subnet Mask)[^\d]*?" + ip_re, line)
+        m = re.search(r"(?:子网掩码|子網路遮罩|Subnet Mask)[^\d]*?" + ip_re, line)
         if m:
             section["mask"] = m.group(1)
-    if section.get("gw") and gw is None:
-        gw = section["gw"]
-    if gw is None:
+    sections.append(section)
+
+    def _ok(ip):
+        # 169.254.x 是 DHCP 失败回退的链路本地地址，视为无效
+        return bool(ip) and not ip.startswith("169.254.")
+
+    # 优先选择“同一网卡段内同时有网关 + 可用本机 IP”的组合
+    with_gw = [s for s in sections if s.get("gw")]
+    if not with_gw:
         return None
-    my_ip = section.get("ip") or my_ip
-    mac = section.get("mac") or mac
-    mask = section.get("mask") or mask
-    return {"gw": gw, "ip": my_ip, "mac": mac, "mask": mask}
+    s = next((x for x in with_gw if _ok(x.get("ip"))), None)
+    if s is None:
+        s = next((x for x in with_gw if x.get("ip")), None)
+    if s is None:
+        s = with_gw[0]
+    ip = s.get("ip")
+    return {"gw": s["gw"], "ip": ip if _ok(ip) else None,
+            "mac": s.get("mac"), "mask": s.get("mask")}
 
 
 def get_network_info():
@@ -167,8 +177,14 @@ def get_network_info():
     except Exception as e:
         raise RuntimeError(f"ipconfig 执行失败: {e}")
     info = _parse_ipconfig(out)
-    if not info or not info.get("ip"):
-        raise RuntimeError("无法从 ipconfig 识别网关/本机 IP（请检查网络连接）")
+    if not info:
+        raise RuntimeError(
+            "ipconfig 中未找到任何有效的默认网关：请确认本机已连接到可上网的"
+            "网络（Wi-Fi/网线），且 DHCP 已正常获取到网关地址；"
+            "可先运行 ipconfig 查看“默认网关”是否有值")
+    if not info.get("ip"):
+        raise RuntimeError(
+            "已找到默认网关，但未识别到本机 IPv4 地址：请检查网卡状态")
     return info
 
 
